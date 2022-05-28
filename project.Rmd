@@ -4,6 +4,9 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+#Load libraries
+library(dplyr)
+
 #Load data
 
 df <- read.table("https://leicester.figshare.com/ndownloader/files/23581310", sep = ",", header = TRUE, stringsAsFactors = FALSE)
@@ -19,7 +22,7 @@ df_comp <- df_comp %>%
 
 df_comp$any_complication <- rowSums(df_comp)
 
-df_comp$any_complication <- ifelse(df_comp$any_complication == 0, FALSE, TRUE)
+df_comp$any_complication <- ifelse(df_comp$any_complication == 0, 0, 1)
 
 df$any_complication <- df_comp$any_complication
 
@@ -47,7 +50,7 @@ lapply(names(df_new), function(x) hist(df_new[[x]], main=x, xlab=misfun(df_new[x
                                    breaks = 'FD'))
 dev.off()
 num1 <- num2 + 1
-num2 <- 20 * i
+num2 <- 20 * (1 + i)
 }
 ```
 
