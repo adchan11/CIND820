@@ -245,33 +245,131 @@ ggp1
 ```
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
-diabetes <- df %>% dplyr::select("INF_ANAM",FIBR_PREDS:LET_IS)
-
-empty_m <- matrix(ncol = length(df),
-                  nrow = length(df),
-                  dimnames = list(names(df), 
-                                  names(df)))
-# Function that accepts matrix for coefficients and data and returns a correlation matrix
-calculate_cramer <- function(m, df) {
-  for (r in seq(nrow(m))){
-    for (c in seq(ncol(m))){
-      m[[r, c]] <- assocstats(table(df[[r]], df[[c]]))$cramer
-    }
-  }
-  return(m)
+#Train/test split
+for(i in 1:ncol(df)) {                                   # Replace NA in all columns
+  df[ , i][is.na(df[ , i])] <- median(df[ , i], na.rm = TRUE)
 }
 
-cor_matrix <- calculate_cramer(empty_m ,df)
-# z<- df[,112:124]
-corrplot(cor_matrix,  method = "number", tl.cex = 0.5, number.cex=.8)
+index <- sort(sample(nrow(df), nrow(df)*.7))
+train <- df[index,]
+test <- df[-index,]
 
-#https://stackoverflow.com/questions/44070853/association-matrix-in-r
+
+
+medical_history_cols <- c(4:8, 11:12, 13:34)
+symptoms_cols <- c(9:10, 35:43, 49, 83:91)
+drugs_cols <- c(76:82, 96:112)
+missing_values_cols <- c('KFK_BLOOD', 'S_AD_KBRIG', 'D_AD_KBRIG', 'IBS_NASL')
+new_train <- train[c(medical_history_cols, symptoms_cols, drugs_cols, 125)] %>%
+  select(-all_of(missing_values_cols))
+
+new_test <- test %>% 
+  select(all_of(colnames(new_train)))
+  
+lapply(new_train, function(x) length(which(is.na(x))))
 ```
-```{r setup, include=FALSE}
-for (i in 1:(length(colnames(df)))) {
 
-  print(ltm::biserial.cor(df$INF_ANAM, df[,i+1], use = "complete.obs"))
+```{r setup, include=FALSE}
+#Logistic Regression
+
+sig_cols <- c('LID_S_n', 'NITR_S', 'NOT_NA_KB', 'NA_BLOOD', 'O_L_POST', 'zab_leg_02', 'zab_leg_01', 'endocr_01')
+train_final <- new_train %>% select(all_of(c(sig_cols, 'any_complication')))
+test_final <- new_test %>% select(all_of(c(sig_cols, 'any_complication')))
+
+LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = new_train, na.action = na.omit)
+summary(LR_model)
+# https://datascienceplus.com/perform-logistic-regression-in-r/#:~:text=Logistic%20regression%20is%20a%20method,general%2C%20can%20assume%20different%
+
+#https://www.datacamp.com/community/tutorials/logistic-regression-R
+#https://towardsdatascience.com/machine-learning-with-r-logistic-regression-152ec20351db
+result <- predict(LR_model, newdata = new_test, type = 'response')
+
+# optCutOff <- optimalCutoff(test$Churn, result)[1] 
+preds<- ifelse(result > 0.5, 1,0 )
+
+## Confusion matrix and statistics
+library(caret)
+caret::confusionMatrix(factor(preds), factor(new_test$any_complication), mode = "everything", positive = "1")
+
+# https://stackoverflow.com/questions/70905642/error-in-lm-fitx-y-na-nan-inf-in-x-in-r
+
+```
+
+```{r setup, include=FALSE}
+#Naive Bayes
+library('e1071')
+ m <- naiveBayes(as.factor(any_complication) ~ ., data = train_final)
+ m$tables
+ print(m)
+
+
+ y_pred <- predict(m, test_final)
+#
+ table(y_pred, test_final$any_complication)
+#
+ cm <- table(y_pred, new_test$any_complication)
+ cm
+
+```
+
+```{r setup, include=FALSE}
+#Random Forest
+library(randomForest)
+
+train_RF <- train_final
+train_RF$any_complication <- as.character(train_RF$any_complication)
+train_RF$any_complication <- as.factor(train_RF$any_complication)
+
+RF_model <- randomForest(any_complication ~., data=train_RF, proximity = TRUE, na.action = na.exclude) 
+
+preds <- predict(RF_model, test_final)
+
+caret::confusionMatrix(factor(preds), factor(test_final$any_complication), mode = "everything", positive = "1")
+
+# https://www.r-bloggers.com/2021/04/random-forest-in-r/
+# https://discuss.analyticsvidhya.com/t/what-does-the-warning-the-response-has-five-or-fewer-unique-values-while-building-random-forest-mean/6442/2
+```
+
+```{r setup, include=FALSE}
+#Neural Network
+library(neuralnet)
+
+#Fill in missing values with median to allow NN to train
+train_NN <- train_final
+
+for(i in 1:ncol(train_NN)) {                                   # Replace NA in all columns
+  train_NN[ , i][is.na(train_NN[ , i])] <- median(train_NN[ , i], na.rm = TRUE)
 }
+
+NN_model <- neuralnet(any_complication ~ ., data = train_NN, hidden = c(2,1), linear.output = FALSE, threshold=0.01)
+
+
+#Test the resulting output
+test_NN <- test_final %>% 
+  select(-any_complication)
+
+nn.results <- compute(NN_model, test_NN)
+results <- data.frame(actual = test_final$any_complication, prediction = nn.results$net.result)
+
+roundedresults<-sapply(results,round,digits=0)
+roundedresultsdf=data.frame(roundedresults)
+attach(roundedresultsdf)
+confusionMatrix(table(actual,prediction), positive = "1")
+# https://stackoverflow.com/questions/63770095/how-to-print-confusion-matrix-of-neuralnet-predicted-probabilities
+# https://datascienceplus.com/neuralnet-train-and-test-neural-networks-using-r/
+
+library(nnet)
+
+irispred <- nnet(any_complication ~ ., data = train_NN, size=10)
+result <- predict(irispred, newdata = test_final)
+preds <- ifelse(result > 0.5, 1,0 )
+
+confusionMatrix(data = factor(preds), reference = factor(test_final$any_complication), mode = "everything", positive = "1")
+
+result <- predict(LR_model, newdata = new_test, type = 'response')
+
+# optCutOff <- optimalCutoff(test$Churn, result)[1] 
+preds<- ifelse(result > 0.5, 1,0 )
+
+
 ```
