@@ -1,19 +1,24 @@
 ---
-title: "project"
+title: "CIND 820 - Initial Results and Analysis"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
+################################################
+#DATA CLEANING
+################################################
+
 #Load libraries
 library(dplyr)
+library(tidyr)
 
 #Load data
 
-df <- read.table("https://leicester.figshare.com/ndownloader/files/23581310", sep = ",", header = TRUE, stringsAsFactors = FALSE)
+df_raw <- read.table("https://leicester.figshare.com/ndownloader/files/23581310", sep = ",", header = TRUE, stringsAsFactors = FALSE)
 
 #Create new class variable
 
-df_comp <- df[113:124]
+df_comp <- df_raw[113:124]
 
 df_comp$LET_IS_binary <- ifelse(df_comp$LET_IS == 0, 0, 1)
 
@@ -24,9 +29,53 @@ df_comp$any_complication <- rowSums(df_comp)
 
 df_comp$any_complication <- ifelse(df_comp$any_complication == 0, 0, 1)
 
-df$any_complication <- df_comp$any_complication
+df_raw$any_complication <- df_comp$any_complication
 
+#Select only relevant features based on scope of research questions
+medical_history_var <- c(4:8, 11:12, 13:34)
+symptoms_var <-c(9:10, 35:43, 49, 83:91)
+drugs_var <- c(75:82, 96:112)
+
+df <- df_raw %>% 
+  dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), "any_complication"))
 ```
+
+``````{r setup, include=FALSE}
+#Transform Blood Pressure Variables
+
+#Filter if any of the blood pressure variables equal 0
+df_blood_invalid <- df %>% 
+  filter(if_any(c(S_AD_KBRIG, D_AD_KBRIG, S_AD_ORIT, D_AD_ORIT), ~ . == 0)) 
+head(df_blood_invalid, 10)
+
+#Remove rows where any of the blood pressure variables equal 0
+
+df <- df %>% 
+  mutate(has_zero = if_any(c(S_AD_KBRIG, D_AD_KBRIG, S_AD_ORIT, D_AD_ORIT), ~ . == 0)) %>%
+  mutate(has_zero = ifelse(is.na(has_zero), FALSE, has_zero)) %>%
+  filter(has_zero == FALSE) %>%
+  select(-has_zero)
+
+#Transform new systolic and diastolic variables 
+
+df$Systolic <- ifelse(is.na(df$S_AD_KBRIG) | is.na(df$S_AD_ORIT), coalesce(df$S_AD_KBRIG, df$S_AD_ORIT), 
+                      (df$S_AD_KBRIG + df$S_AD_ORIT) / 2)
+
+length(which(is.na(df$Systolic)))
+
+df$Diastolic <- ifelse(is.na(df$D_AD_KBRIG) | is.na(df$D_AD_ORIT), coalesce(df$D_AD_KBRIG, df$D_AD_ORIT), 
+                      (df$D_AD_KBRIG + df$D_AD_ORIT) / 2)
+
+length(which(is.na(df$Diastolic)))
+
+#Remove pre-existing blood pressure variables and just keep Systolic blood pressure
+
+df <- df %>%
+  select(-c('S_AD_KBRIG', 'S_AD_ORIT', 'D_AD_KBRIG', 'D_AD_ORIT', 'Diastolic')) %>%
+  relocate(Systolic, .before = K_BLOOD)
+```
+
+
 
 ```{r setup, include=FALSE}
 #Create histograms 
@@ -39,8 +88,8 @@ num1 <- 1
 num2 <- 20
 for (i in 1:(ceiling(length(df)/20))) {
 
-if (i == 7) {
-  num2 <- 125
+if (i == 4) {
+  num2 <- 75
 }
 png(paste0('hist', i, '.png'), 1000, 1000)
 par(mfrow=c(5,4))
@@ -60,9 +109,10 @@ library(rstatix)
 library(ggpubr)
 
 #Do not include KFK_BLOOD (variable 89) as it only has 4 records and the rest are missing values
-numeric_cols = c(2, 35, 36, 37, 38, 84, 86, 87, 88, 90, 91)
+numeric_cols = c("AGE", "Systolic", "K_BLOOD", "NA_BLOOD", "ALT_BLOOD", "AST_BLOOD", "L_BLOOD", "ROE")
 
-df_numeric <- df[c(numeric_cols, which(colnames(df) == "any_complication"))]
+df_numeric <- df %>% 
+  select(any_of(c(numeric_cols, "any_complication")))
 
 df_long <- df_numeric %>%
   pivot_longer(-`any_complication`, names_to = "variables", values_to = "value") %>%
@@ -71,6 +121,7 @@ df_long <- df_numeric %>%
 #Remove NA values
 df_long <- df_long[!is.na(df_long$value),]
 
+#Generate boxplots and include t-test significance results
 df_stats <- df_long %>%
   group_by(variables) %>%
   t_test(value ~ any_complication) %>%
@@ -90,93 +141,63 @@ df_stats <- df_stats %>%
 
 df_boxplots +stat_pvalue_manual(df_stats, label = "p.adj.signif") + 
  font("title", size = 14,  face = "bold")+
- 
-
- # font("xlab", size = 12, color = "blue")+
- # font("ylab", size = 12, color = "#993333")+
  font("xy.text", size = 12, face = "bold") 
-
-# graphs <- df_long %>%
-#   group_by(variables) %>%
-#   doo(
-#     ~ggboxplot(
-#       data =., x = "any_complication", y = "value",
-#       fill = "any_complication", palette = "npg", legend = "none",xlab = FALSE, ylab = FALSE,
-#       ggtheme = theme_pubr(border = TRUE)
-#       ),
-#     result = "plots"
-#   )
-# graphs
-# 
-# 
-# variables <- graphs$variables
-# for(i in 1:length(variables)){
-#    assign(paste("graph.", i, sep = ""), graphs$plots[[i]] +
-#     labs(title = variables[i]) +
-#     stat_pvalue_manual(df_stats[i, ], label.size = 5,label = "p.adj.signif"))
-#   
-#   # graph_i <- 
-#   # print(graph.i)
-# }
-# 
-# # ggarrange(graph.1)
-# 
-# ggarrange(graph.1,graph.3,graph.6,ncol = 3, nrow = 3)
-# ggarrange(graph.11,graph.7,graph.2,graph.4,graph.5,graph.8,graph.9,graph.10, ncol = 4, nrow = 3)
-
-```
-
-
-```{r setup, include=FALSE}
-#Remove other class variables
-
-df <- df %>%
-  select(-FIBR_PREDS:LET_IS)
 
 ```
 
 ```{r setup, include=FALSE}
 #Correlation plot for numeric variables
-#Point-Biserial coefficient
+#Point-Biserial coefficient with t-test for significance
 library(corrplot)
 
+#Select only numeric variables
 df_corr_numeric <- df_numeric 
-df_corr_numeric$any_complication <- recode(as.character(df_corr_numeric$any_complication), 'FALSE' = 0, 'TRUE' = 1)
 
+#Generate significance values at confidence level = 0.95
 testRes <- cor.mtest(df_corr_numeric, conf.level = 0.95)
+
+#Generate correlation plot with statistical significance
 corrplot(cor(df_corr_numeric, use = 'pairwise.complete.obs'), p.mat = testRes$p, method = "color", diag = FALSE, type = 'upper',
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
          insig = 'label_sig', pch.col = 'purple')
 
-# http://web.pdx.edu/~newsomj/pa551/lectur15.htm
 
+# Reference: http://web.pdx.edu/~newsomj/pa551/lectur15.htm
 ```
+
 ```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
 #Correlation plot for binary variables
 #Phi Coefficient correlation
 library(corrplot)
 
+#Select binary attributes only
 binary_cols <- c(3, 8, 10, 13:34, 39:44, 49:83, 85, 96:99, 106:112)
-df_corr_binary <- df[c(binary_cols, 125)]
-df_corr_binary$any_complication <- recode(as.character(df_corr_binary$any_complication), 'FALSE' = 0, 'TRUE' = 1)
+df_corr_binary_raw <- df_raw[binary_cols]
+df_corr_binary <- df %>% 
+  select(any_of(c(colnames(df_corr_binary_raw), "any_complication")))
 
 #Do not include IBS_NASL (variable 2) since it has 1628/1700 missing values
-df_corr_binary_1 <- df_corr_binary[c(1,3:40, 79)]
+df_corr_binary <- df_corr_binary %>%
+  select(-IBS_NASL)
 
+#Split into two datasets so that the correlation plot is easier to read 
 
-testRes <- cor.mtest(df_corr_binary_1, conf.level = 0.95)
-corrplot(cor(df_corr_binary_1, use = "pairwise.complete.obs"), p.mat = testRes$p, method = "color", diag = FALSE, type = 'upper',
-         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
+df_corr_binary_1 <- df_corr_binary[c(1:24, 52)]
+df_corr_binary_2 <- df_corr_binary[25:52]
+#Generate significance values at confidence level = 0.95
+testRes_1 <- cor.mtest(df_corr_binary_1, conf.level = 0.95)
+testRes_2 <- cor.mtest(df_corr_binary_2, conf.level = 0.95)
+
+#Generate correlation plot with statistical significance
+corrplot(cor(df_corr_binary_1, use = "pairwise.complete.obs"), p.mat = testRes_1$p, method = "color", diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.8, 
          insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
 
-df_corr_binary_2 <- df_corr_binary[c(41:79)]
-
-
-testRes <- cor.mtest(df_corr_binary_2, conf.level = 0.95)
-corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes$p, method = "color", diag = FALSE, type = 'upper',
-         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
+corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes_2$p, method = "color", diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.8, 
          insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
 
+# References:
 # https://stat.ethz.ch/pipermail/r-help/2015-April/428127.html
 # http://web.pdx.edu/~newsomj/pa551/lectur15.htm
 # http://www.ce.memphis.edu/7012/L17_CategoricalVariableAssociation.pdf
@@ -184,64 +205,38 @@ corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes$p
 
 ```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
 #Correlation plot for categorical/ordinal variables
-#Cramer V
+#Cramér's V
 library(corrplot)
 
+#Select ordinal variables only
 ordinal_cols <- c(4, 5, 6, 7, 9, 11, 12, 45:48, 92:95, 100:105)
 
-df_corr_ordinal <- df[c(ordinal_cols, 125)]
-df_corr_ordinal$any_complication <- recode(as.character(df_corr_ordinal$any_complication), 'FALSE' = 0, 'TRUE' = 1)
+df_corr_ordinal_raw <- df_raw[ordinal_cols]
+df_corr_ordinal <- df %>% 
+  select(any_of(c(colnames(df_corr_ordinal_raw), "any_complication")))
 
+#Function to generate a matrix of chi-square test values
 chisqmatrix <- function(x) {
-  names = colnames(x);  num = length(names)
-  m = matrix(nrow=num,ncol=num,dimnames=list(names,names))
+  names <- colnames(x);  num = length(names)
+  m <- matrix(nrow=num,ncol=num,dimnames=list(names,names))
   for (i in 1:(num-1)) {
     for (j in (i+1):num) {
-      m[i,j] = chisq.test(x[,i],x[,j],)$p.value
+      m[i,j] <- chisq.test(x[,i],x[,j],simulate.p.value = TRUE)$p.value
     }
   }
   return (m)
 }
-mat = chisqmatrix(df_corr_ordinal)
 
+#Create matrix of chi-square test values
+mat <- chisqmatrix(df_corr_ordinal)
+
+#Generate correlation plot with chi-square test significance 
 corrplot::corrplot(DescTools::PairApply(df_corr_ordinal, DescTools::CramerV), p.mat = mat, method = 'color', diag = FALSE, type = 'upper',
          sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
          insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
 
+# Reference:
 # https://stackoverflow.com/questions/32732582/chi-square-p-value-matrix-in-r
-```
-
-```{r fig.align="center", echo = FALSE,fig.height = 30, fig.width = 30}
-library(Hmisc)
-
-data <- df[1:20] %>% mutate(across(everything(), as.integer))
-# #Convert NA to "NA" to visualize missing values 
-# df_hist <- df
-# df_hist[is.na(df_hist)] <- 'NA'
-# hist.data.frame(df_hist)
-# # hist(df)
-# for (col in 2:ncol(df)) {
-#     hist(df[,col])
-# }
-data_long <- data %>%                          # Apply pivot_longer function
-  pivot_longer(colnames(data)) %>% 
-  as.data.frame()
-
-ggp1 <- ggplot(data_long, aes(x = value)) +    # Draw each column as histogram
-  geom_histogram() +
-  facet_wrap(~ name, ncol= 4,scales = "free")
-ggp1
-
-# https://statisticsglobe.com/histogram-density-for-each-column-data-frame-r
-# df_long <- pivot_longer(df, everything(), names_to = "variable", values_to = "observation")
-# 
-# # specify that 'Variables' are ordered (i.e. Variable_2 is after Variable_1)
-# df_long$variable <- factor(df_long$variable, levels = unique(df_long$variable), ordered = TRUE)
-# 
-# # plot histograms with ggplot
-# ggplot(df_long, aes(x = observation)) +
-#   geom_histogram(bins = 15) +
-#   facet_wrap(~variable, ncol = 6, strip.position = "right")
 ```
 
 ```{r setup, include=FALSE}
@@ -253,8 +248,6 @@ for(i in 1:ncol(df)) {                                   # Replace NA in all col
 index <- sort(sample(nrow(df), nrow(df)*.7))
 train <- df[index,]
 test <- df[-index,]
-
-
 
 medical_history_cols <- c(4:8, 11:12, 13:34)
 symptoms_cols <- c(9:10, 35:43, 49, 83:91)
@@ -276,20 +269,20 @@ sig_cols <- c('LID_S_n', 'NITR_S', 'NOT_NA_KB', 'NA_BLOOD', 'O_L_POST', 'zab_leg
 train_final <- new_train %>% select(all_of(c(sig_cols, 'any_complication')))
 test_final <- new_test %>% select(all_of(c(sig_cols, 'any_complication')))
 
-LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = new_train, na.action = na.omit)
+LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train, na.action = na.omit)
 summary(LR_model)
 # https://datascienceplus.com/perform-logistic-regression-in-r/#:~:text=Logistic%20regression%20is%20a%20method,general%2C%20can%20assume%20different%
 
 #https://www.datacamp.com/community/tutorials/logistic-regression-R
 #https://towardsdatascience.com/machine-learning-with-r-logistic-regression-152ec20351db
-result <- predict(LR_model, newdata = new_test, type = 'response')
+result <- predict(LR_model, newdata = test, type = 'response')
 
 # optCutOff <- optimalCutoff(test$Churn, result)[1] 
 preds<- ifelse(result > 0.5, 1,0 )
 
 ## Confusion matrix and statistics
 library(caret)
-caret::confusionMatrix(factor(preds), factor(new_test$any_complication), mode = "everything", positive = "1")
+caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
 
 # https://stackoverflow.com/questions/70905642/error-in-lm-fitx-y-na-nan-inf-in-x-in-r
 
@@ -298,14 +291,14 @@ caret::confusionMatrix(factor(preds), factor(new_test$any_complication), mode = 
 ```{r setup, include=FALSE}
 #Naive Bayes
 library('e1071')
- m <- naiveBayes(as.factor(any_complication) ~ ., data = train_final)
+ m <- naiveBayes(as.factor(any_complication) ~ ., data = train)
  m$tables
  print(m)
 
 
- y_pred <- predict(m, test_final)
+ y_pred <- predict(m, test)
 #
- table(y_pred, test_final$any_complication)
+ table(y_pred, test$any_complication)
 #
  cm <- table(y_pred, new_test$any_complication)
  cm
@@ -316,15 +309,15 @@ library('e1071')
 #Random Forest
 library(randomForest)
 
-train_RF <- train_final
+train_RF <- train
 train_RF$any_complication <- as.character(train_RF$any_complication)
 train_RF$any_complication <- as.factor(train_RF$any_complication)
 
 RF_model <- randomForest(any_complication ~., data=train_RF, proximity = TRUE, na.action = na.exclude) 
 
-preds <- predict(RF_model, test_final)
+preds <- predict(RF_model, test)
 
-caret::confusionMatrix(factor(preds), factor(test_final$any_complication), mode = "everything", positive = "1")
+caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
 
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
 # https://discuss.analyticsvidhya.com/t/what-does-the-warning-the-response-has-five-or-fewer-unique-values-while-building-random-forest-mean/6442/2
@@ -335,7 +328,7 @@ caret::confusionMatrix(factor(preds), factor(test_final$any_complication), mode 
 library(neuralnet)
 
 #Fill in missing values with median to allow NN to train
-train_NN <- train_final
+train_NN <- train
 
 for(i in 1:ncol(train_NN)) {                                   # Replace NA in all columns
   train_NN[ , i][is.na(train_NN[ , i])] <- median(train_NN[ , i], na.rm = TRUE)
@@ -345,11 +338,11 @@ NN_model <- neuralnet(any_complication ~ ., data = train_NN, hidden = c(2,1), li
 
 
 #Test the resulting output
-test_NN <- test_final %>% 
+test_NN <- test %>% 
   select(-any_complication)
 
 nn.results <- compute(NN_model, test_NN)
-results <- data.frame(actual = test_final$any_complication, prediction = nn.results$net.result)
+results <- data.frame(actual = test$any_complication, prediction = nn.results$net.result)
 
 roundedresults<-sapply(results,round,digits=0)
 roundedresultsdf=data.frame(roundedresults)
