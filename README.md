@@ -14,7 +14,7 @@ This repository contains the code required to evalute which features such as med
 # Table of Contents
 1. [Abstract](#abstract)
 2. [Requirements](#requirements)
-3. [Link to the Dataset & Data Dictionary](#link-to-the-dataset-&-data-dictionary)
+3. [Link to the Dataset and Data Dictionary](#link-to-the-dataset-and-data-dictionary)
 4. [Repository Content](#repository-content)
 5. [Data Preparation](#data-preparation)
 6. [Methodology](#methodology) 
@@ -69,7 +69,7 @@ Required packages are as follows:
 - Pandas_Profiling
 - SSL
 
-# Link to the Dataset & Data Dictionary
+# Link to the Dataset and Data Dictionary
 https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complications_Database/12045261/3
 
 # Repository Content
@@ -119,15 +119,16 @@ There are 12 different class variables (i.e. complications) in the dataset but t
 
 # Methodology 
 The study methdology was as follows: 
+![Methodology](https://github.com/adchan11/CIND820/blob/8347509dc0496eacc07672dbd58e2d1fd01fc28f/Methodology.pdf)<br>
+
 | Step | Description |
 | ------------- | ------------- |
-| PROBLEM AND OBJECTIVE DEFINITION | Identify business context, define problem and related objectives. |
-| DATA PREPARATION | Identify data sources and gather datasets in similar time periods.  Merge data sources and prepare data set for exploration. |
-| DATA PREPROCESSING & EXPLORATION | Data cleaning (duplication elimination, missing value detection, error detection, outlier detection), transformation and normalization, descriptive statistics, univariate distribution analysis, bivariate correlation analysis (if required). |
-| MODEL BUILDING & TESTING | Assumption testing for linear regression (Normality, linearity of IV-DV relationship, multicollinearity, homoscedasticity, autocorrelation, normal distribution of errors (Q-Q plots)), dimension reduction (as required), hyperparameter tuning, model fitting. |
-| ANALYSIS | Split model into training and testing sets, conduct predictive analysis. |
-| RESULTS & VALIDATION | Present results for all models include measures of model effectiveness, efficiency and stability. |
-| INTERPRET & COMMUNICATE | Interpret results against evaluation metrics and present findings (report, presentation etc.). |
+| DATA CLEANING | Fix and remove incorrect, corrupted, incorrectly formatted, duplicate, or incomplete data. |
+| EXPLORATORY ANALYSIS | Descriptive statistics, univariate distribution analysis (histograms), statistical hypothesis testing, correlation analysis. |
+| DIMENSIONALITY REDUCTION | Feature selection by correlation analysis and rank importance. |
+| PREDICTIVE MODELING | Split model into training and testing sets and apply supervised learning machine learning methods. |
+| VALIDATION | Compare results for all models using metrics such as accuracy, precision, recall, AUC and run time. |
+| DISCUSSION | Interpret results and discuss limitations and future work. |
 
 # Results
 The following 3 models were built and evaluated: 
