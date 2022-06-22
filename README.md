@@ -7,7 +7,7 @@ Dr. Sedef Akinli Kocak <br>
 This repository contains the code required to evalute which features such as medical history, symptoms at time of addmision, and therapeutic interventions are most important in predicting myocardial infarction complications in hospital patients and develop prediction models using Random Forest, naïve Bayes, Stepwise Logistic Regression and Neural Network methods.
 
 ### Report from the Canadian Chronic Disease Surveillance System: Heart Disease in Canada, 2018: 
-![Heart_Disease_Map]([https://user-images.githubusercontent.com/99699157/156967715-5ac8c81f-924c-48b5-b8a9-e4f149dae4b6.png](https://www.canada.ca/content/dam/phac-aspc/images/services/publications/diseases-conditions/report-heart-disease-canada-2018/fig13-eng.jpg))<br>
+![Heart_Disease_Map]([https://user-images.githubusercontent.com/99699157/156967715-5ac8c81f-924c-48b5-b8a9-e4f149dae4b6.png](https://www.canada.ca/content/dam/phac-aspc/images/services/publications/diseases-conditions/report-heart-disease-canada-2018/fig13-eng.jpg])<br>
  Reference: https://www.canada.ca/en/public-health/services/publications/diseases-conditions/report-heart-disease-Canada-2018.html
 
 
