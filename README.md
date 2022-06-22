@@ -74,8 +74,8 @@ https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complicati
 
 # Repository Content
 The repository content is as follows: 
-- The 'Constructed_Dataset' folder contains the dataset constructed from the data sources listed above. 
-- The 'Checkpoints' folder contains the checkpoints of the study to date. Each model has one Python notebook checkpoint. 
+- The 'Code and Technical Reports' folder contains R Markdown and Jupyter Notebook files along with their rendered HTMl technical reports.
+- The 'Figures' folder contains the images used in this README file. 
 
 # Data Preparation 
 The following attributes were extracted and/or transformed as the independent variables within the dataset: 
@@ -122,7 +122,7 @@ There are 12 different class variables (i.e. complications) in the dataset but t
 The study methdology was as follows: 
 
 <p align="center">
-  <img src="https://github.com/adchan11/CIND820/blob/3276fdf40c787f9a4b1966944ee6343a075e5278/Methodology.png">
+  <img src="https://github.com/adchan11/CIND820/blob/1154660a6af91b395174178cd9f79992231b85c6/Figures/Methodology.png">
 </p>
 
 
@@ -155,7 +155,7 @@ The following 4 models were built and evaluated:
 <b>Rank of Feature Importance<b>
  
  <p align="center">
-  <img src="https://github.com/adchan11/CIND820/blob/ec928cbb44956616ddb6aefe519722ce3dce1e09/Feature%20Importance.png">
+  <img src="https://github.com/adchan11/CIND820/blob/1154660a6af91b395174178cd9f79992231b85c6/Figures/Feature%20Importance.png">
 </p>
  
  ```
