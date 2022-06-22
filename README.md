@@ -121,7 +121,7 @@ There are 12 different class variables (i.e. complications) in the dataset but t
 The study methdology was as follows: 
 
 <p align="center">
-  <src="https://github.com/adchan11/CIND820/blob/3276fdf40c787f9a4b1966944ee6343a075e5278/Methodology.png">
+  <img src="https://github.com/adchan11/CIND820/blob/3276fdf40c787f9a4b1966944ee6343a075e5278/Methodology.png">
 </p>
 
 
