@@ -74,7 +74,7 @@ https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complicati
 
 # Repository Content
 The repository content is as follows: 
-- The 'Code and Technical Reports' folder contains R Markdown and Jupyter Notebook files along with their rendered HTMl technical reports.
+- The 'Code and Technical Reports' folder contains R Markdown and Jupyter Notebook files along with their rendered HTML technical reports.
 - The 'Figures' folder contains the images used in this README file. 
 
 # Data Preparation 
