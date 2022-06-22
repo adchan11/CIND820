@@ -91,7 +91,8 @@ The following attributes were extracted and/or transformed as the independent va
 - endocr_01
 - zab_leg_01
 - zab_leg_06
-- GB, O_L_POST
+- GB
+- O_L_POST
 - K_SH_POST
 - MP_TP_POST
 - IM_PG_P
@@ -136,32 +137,93 @@ The study methdology was as follows:
 | DISCUSSION | Interpret results and discuss limitations and future work. |
 
 # Results
-The following 3 models were built and evaluated: 
-•	Stepwise Linear Regression
-•	Gradient Boosted (XG Boost) Regression 
-•	Kernel Ridge Regression 
+The following 4 models were built and evaluated: 
+- Random Forest
+- Naïve Bayes
+- Stepwise Logistic Regression
+- Neural Networks
 
 <b>Summary performance measures for each model is as follows: </b>
-| Model  | Stepwise Linear Regression | Gradient Boosted (XG Boost) Regression | Kernel Ridge Regression |
-| ------------- | ------------- | ------------- | ------------- |
-| Mean Absolute Error  | 0.05  | 0.05 | 0.05 |
-| Root Mean Squared Error  | 0.004 | 0.005 | 0.005 | 
-| R^2  | 0.138 | 0.262 | 0.305 |
-| Training time  | 0.005s | 0.07s | 4.35s | 
-| Prediction time | 0.001s | 0.003s | 0.23s |
+| Model  | Random Forest | Naïve Bayes | Stepwise Logistic Regression | Neural Networks |
+| ------------- | ------------- | ------------- | ------------- | ------------- |
+| Accuracy  | 0.05  | 0.05 | 0.05 | 0.05 |
+| Precision  | 0.004 | 0.005 | 0.005 | 0.05 |  
+| Recall | 0.138 | 0.262 | 0.305 | 0.05 |
+| AUC | 0.138 | 0.262 | 0.305 | 0.05 |
+| Training Run Time  | 0.005s | 0.07s | 4.35s | 0.05 |
 
-The attributes with the most information gain in relation to the dependent variable are as follows: 
-| Model  | Gradient Boosted (XG Boost) Regression | Kernel Ridge Regression |
-| ------------- | ------------- | ------------- | 
-| 1  | Long-Stay QM Rating (33.0)  | Total nursing staff turnover (0.908) | 
-| 2  | Average Number of Residents per Day (31.0) | Percentage of long-stay residents whose need for help with daily activities has increased (0.100) | 
-| 3 | Percentage of long-stay residents whose ability to move independently worsened (28.0) | Long-Stay QM Rating (0.084) | 
-| 4  | Percentage of long-stay residents whose need for help with daily activities has increased (27.0) | Percentage of long-stay residents who were physically restrained (0.045) | 
+<b>Rank of Feature Importance<b>
+ 
+ <p align="center">
+  <img src="https://github.com/adchan11/CIND820/blob/ec928cbb44956616ddb6aefe519722ce3dce1e09/Feature%20Importance.png">
+</p>
+ 
+ ```
+ ROC curve variable importance
 
+  only 20 most important variables shown (out of 36)
+
+           Importance
+AGE            0.6429
+NA_R_1_n       0.5875
+STENOK_AN      0.5782
+FK_STENOK      0.5737
+NITR_S         0.5677
+SEX            0.5671
+ZSN_A          0.5561
+Systolic       0.5503
+L_BLOOD        0.5466
+LID_S_n        0.5465
+ROE            0.5454
+DLIT_AG        0.5440
+NA_KB          0.5432
+endocr_01      0.5425
+K_BLOOD        0.5413
+NA_BLOOD       0.5400
+ANT_CA_S_n     0.5400
+INF_ANAM       0.5368
+B_BLOK_S_n     0.5327
+MP_TP_POST     0.5326
+ ```
+
+<b>Most Stastistically Significant Features by Correlation Analysis<b>
+| Variable         |
+| ---------------- |
+| AGE              |
+| SEX              |
+| INF\_ANAM        |
+| STENOK\_AN       |
+| FK\_STENOK       |
+| IBS\_POST        |
+| DLIT\_AG         |
+| ZSN\_A           |
+| nr\_01           |
+| endocr\_01       |
+| zab\_leg\_01     |
+| zab\_leg\_06     |
+| GB, O\_L\_POST   |
+| K\_SH\_POST      |
+| MP\_TP\_POST     |
+| IM\_PG\_P        |
+| GIPO\_K          |
+| Systolic         |
+| K\_BLOOD         |
+| NA\_BLOOD        |
+| L\_BLOOD         |
+| ROE              |
+| n\_p\_ecg\_p\_12 |
+| fibr\_ter\_02    |
+| NA\_KB           |
+| NOT\_NA\_KB      |
+| NITR\_S          |
+| NA\_R\_1\_n      |
+| NA\_R\_2\_n      |
+| NA\_R\_3\_n      |
+| LID\_S\_n        |
+| B\_BLOK\_S\_n    |
+| ANT\_CA\_S\_n    |
+| ASP\_S\_n        |
+| TIKL\_S\_n       |
 
 # Study Conclusions
-This study explored the relationship between nursing home quality measures and the long-stay patient outpatient ED Visit rate. The research questions focused on determining which quality measures significantly affect the ED Visit rate as well as which quality measures are able to predict the ED Visit rate for long-stay patients. Three models were built using Stepwise Regression, Gradient Boosted (XG Boost) Regression and Kernel Ridge Regression. The models were able to identify relationships between nursing home measures and outpatient ED Visit rate however a significant relationship was not established. The selected nursing home quality measures had 13% - 30% ability to predict the ED Visit rate, demonstrating that nursing home quality measures are not able to fully describe the ED Visit rate by itself. The Gradient Boosted (XG Boost) Regression and Kernel Ridge Regression models outperformed the Stepwise Regression model by a significant margin and were able to provide better predictive performance.
-
-This study contributes to the body of knowledge regarding the impact of quality measures in the clinical, operational and safety domains on the outpatient ED Visit rate for long-stay patients within the nursing home environment. It identified that, while individual quality measures may contribute in part to the overall outpatient ED Visit rate for long-stay patients, there are many factors outside the realm of quality that predict ED Visit rate. However, this study was able to isolate a few quality-focused attributes such as ‘Long-Stay QM Rating’ and ‘Total Nursing Staff turnover’ that may have some impact on predicting the outpatient ED Visit rate within nursing homes that could be used in more comprehensive studies within this space. Additionally, a potential relationship between mobility and ED Visit rate was postulated, however additional research may be required. Clinical and operational quality measures were found to have a greater impact on predictive performance than safety measures. 
-
-Further studies within this area can focus on exploring the relationship between clinical measures focused on mobility, ADLs and falls. Studies can additionally explore the relationship between aggregate quality measures and their predictive performance in relation to the nursing home long-stay outpatient ED Visit rate.
+TBD
