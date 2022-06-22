@@ -1,13 +1,24 @@
 ---
-title: "CIND 820 - Initial Results and Analysis"
-output: html_document
+title: "Applications of Supervised Machine Learning Methods for the Prediction of Myocardial Infarction Complications in Hospital Patients"
+author: 
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: console
 ---
+<center> <h1> Initial Results and Code </h1> </center>
+<center>  <h3> [Author: Adrian Chan] </h2> </center>
+<center>  <h3> [Supervisor: Dr. Sedef Akinli Kocak] </h2> </center>
+<center> <h3> [CIND 820: DA0 & 501051583] </h2> </center>
+---
+******
+\newpage
+## Data Cleaning
 
-```{r setup, include=FALSE}
-################################################
-#DATA CLEANING
-################################################
-
+Data is loaded and the class variable is created. Features are selected based on the research questions.
+```{r}
 #Load libraries
 library(dplyr)
 library(tidyr)
@@ -40,7 +51,8 @@ df <- df_raw %>%
   dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), "any_complication"))
 ```
 
-``````{r setup, include=FALSE}
+Outliers are removed and transformations are done on select input features to ensure consistency and data quality.
+```{r}
 #Transform Blood Pressure Variables
 
 #Filter if any of the blood pressure variables equal 0
@@ -75,9 +87,13 @@ df <- df %>%
   relocate(Systolic, .before = K_BLOOD)
 ```
 
+******
+\newpage
+## Exploratory Analysis
 
-
-```{r setup, include=FALSE}
+Distribution of Attributes
+-variables with too much missing data are removed
+```{r}
 #Create histograms 
 
 misfun <- function(z) {paste(
@@ -108,6 +124,8 @@ df <- df %>%
   select(-c("KFK_BLOOD", "IBS_NASL"))
 ```
 
+Boxplots of Numeric Attributes
+-non-significant features are removed
 ```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
 #Box plots using t-test
 library(rstatix)
@@ -149,12 +167,12 @@ df_boxplots +stat_pvalue_manual(df_stats, label = "p.signif") +
  font("xy.text", size = 12, face = "bold")
 
 #Remove non significant variables
-
-df <- df %>%
-  select(-c('ALT_BLOOD', 'AST_BLOOD'))
+# 
+# df <- df %>%
+#   select(-c('ALT_BLOOD', 'AST_BLOOD'))
 ```
-
-```{r setup, include=FALSE}
+Correlation Plot for Numeric Variables
+```{r}
 #Correlation plot for numeric variables
 #Point-Biserial coefficient with t-test for significance
 library(corrplot)
@@ -174,6 +192,7 @@ corrplot(cor(df_corr_numeric, use = 'pairwise.complete.obs'), p.mat = testRes$p,
 # Reference: http://web.pdx.edu/~newsomj/pa551/lectur15.htm
 ```
 
+Correlation Plot for Binary Variables
 ```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
 #Correlation plot for binary variables
 #Phi Coefficient correlation
@@ -227,8 +246,9 @@ corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes_2
 # http://www.ce.memphis.edu/7012/L17_CategoricalVariableAssociation.pdf
 ```
 
+Correlation Plot for Categorical Variables
 ```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
-#Correlation plot for categorical/ordinal variables
+#Correlation plot for categorical variables
 #Cramér's V
 library(corrplot)
 
@@ -250,131 +270,252 @@ corrplot::corrplot(DescTools::PairApply(df_corr_ordinal, DescTools::CramerV), p.
 # Reference:
 # https://stackoverflow.com/questions/32732582/chi-square-p-value-matrix-in-r
 ```
+\newpage
+## Dimensionality Reduction
 
-```{r setup, include=FALSE}
-#Train/test split
+Feature Selection
+```{r}
+not_sig_cols <- c('ALT_BLOOD', 'AST_BLOOD', "SIM_GIPERT", "nr_11", 'nr_02', 'nr_03', 'nr_04', 'nr_07', 'nr_08', 'np_01', 'np_04', 'np_05', 'np_07', 'np_08', 'np_09', 'np_10', 'endocr_02', 'endocr_03', 'zab_leg_02', 'zab_leg_03', 'zab_leg_04', 'SVT_POST', 'GT_POST', 'fibr_ter_01', 'fibr_ter_03', 'fibr_ter_05', 'fibr_ter_06', 'fibr_ter_07', 'fibr_ter_08', 'GIPER_NA', 'LID_KB', 'GEPAR_S_n', 'TRENT_S_n', 'NOT_NA_1_n', 'NOT_NA_2_n', 'NOT_NA_3_n')
+
+df <- df %>% select(-all_of(not_sig_cols))
+```
+
+Feature Importance
+```{r}
+#Feature Importance using the LVQ Method
+set.seed(1)
+# load the library
+library(mlbench)
+library(caret)
+
+#Imputation of missing values using the median
 for(i in 1:ncol(df)) {                                   # Replace NA in all columns
   df[ , i][is.na(df[ , i])] <- median(df[ , i], na.rm = TRUE)
 }
 
+df_lvq <- df
+
+#Convert class variable to factor
+df_lvq$any_complication <- as.character(df_lvq$any_complication)
+df_lvq$any_complication <- as.factor(df_lvq$any_complication)
+
+# prepare training scheme 
+control <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+# train the model
+model <- train(any_complication ~., data = df_lvq, method = "lvq", preProcess = "scale", trControl = control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+
+#Obtain list of top 20 important variables
+library(tibble)
+imp_cols <- importance$importance 
+imp_cols <- tibble::rownames_to_column(imp_cols, "Variables")
+imp_cols_string <- imp_cols[1:20, 'Variables']
+
+#Compare feature importance with correlation analysis 
+Reduce(intersect, list(imp_cols_string, colnames(df)))
+
+#Reference
+# https://machinelearningmastery.com/feature-selection-with-the-caret-r-package/
+
+```
+
+\newpage
+## Data Pre Processing
+
+```{r}
+#Data Scaling
+
+#Custom function to implement min max scaling
+minMax <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+#Apply minMax function to all numeric attributes
+df <- df %>% 
+  mutate(across(any_of(numeric_cols), minMax))
+
+#Data Normalization - automatically select the best method
+# library(bestNormalize)
+# 
+# df2 <- df2 %>% 
+#   mutate(across(all_of(numeric_cols), ))
+
+#Reference:
+# https://www.geeksforgeeks.org/how-to-normalize-and-standardize-data-in-r/
+# https://cran.r-project.org/web/packages/bestNormalize/vignettes/bestNormalize.html
+
+```
+
+******
+\newpage
+## Train/Test Split
+```{r}
+#Train/test split
 index <- sort(sample(nrow(df), nrow(df)*.7))
+
+#Convert class variable to factor
+df$any_complication <- as.character(df$any_complication)
+df$any_complication <- as.factor(df$any_complication)
+
 train <- df[index,]
 test <- df[-index,]
 
-medical_history_cols <- c(4:8, 11:12, 13:34)
-symptoms_cols <- c(9:10, 35:43, 49, 83:91)
-drugs_cols <- c(76:82, 96:112)
-missing_values_cols <- c('KFK_BLOOD', 'S_AD_KBRIG', 'D_AD_KBRIG', 'IBS_NASL')
-new_train <- train[c(medical_history_cols, symptoms_cols, drugs_cols, 125)] %>%
-  select(-all_of(missing_values_cols))
+#Apply SMOTE to fix imbalanced class distribution
+library(DMwR)
+set.seed(1)
+train_smote <- DMwR::SMOTE(any_complication ~ ., data = train, perc.over = 154)
 
-new_test <- test %>% 
-  select(all_of(colnames(new_train)))
-  
-lapply(new_train, function(x) length(which(is.na(x))))
+table(train_smote$any_complication)
+
+
+# medical_history_cols <- c(4:8, 11:12, 13:34)
+# symptoms_cols <- c(9:10, 35:43, 49, 83:91)
+# drugs_cols <- c(76:82, 96:112)
+# missing_values_cols <- c('KFK_BLOOD', 'S_AD_KBRIG', 'D_AD_KBRIG', 'IBS_NASL')
+# new_train <- train[c(medical_history_cols, symptoms_cols, drugs_cols, 125)] %>%
+#   select(-all_of(missing_values_cols))
+# 
+# new_test <- test %>% 
+#   select(all_of(colnames(new_train)))
+#   
+# lapply(new_train, function(x) length(which(is.na(x))))
+
+#Reference
+# https://www.statology.org/smote-in-r/
 ```
 
-```{r setup, include=FALSE}
+```{r}
 #Logistic Regression
+set.seed(1)
+# sig_cols <- c('LID_S_n', 'NITR_S', 'NOT_NA_KB', 'NA_BLOOD', 'O_L_POST', 'zab_leg_02', 'zab_leg_01', 'endocr_01')
+# train_final <- new_train %>% select(all_of(c(sig_cols, 'any_complication')))
+# test_final <- new_test %>% select(all_of(c(sig_cols, 'any_complication')))
 
-sig_cols <- c('LID_S_n', 'NITR_S', 'NOT_NA_KB', 'NA_BLOOD', 'O_L_POST', 'zab_leg_02', 'zab_leg_01', 'endocr_01')
-train_final <- new_train %>% select(all_of(c(sig_cols, 'any_complication')))
-test_final <- new_test %>% select(all_of(c(sig_cols, 'any_complication')))
-
-LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train, na.action = na.omit)
-summary(LR_model)
+system.time(full_LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train_smote, na.action = na.omit))
+summary(full_LR_model)
 # https://datascienceplus.com/perform-logistic-regression-in-r/#:~:text=Logistic%20regression%20is%20a%20method,general%2C%20can%20assume%20different%
+
+library(MASS)
+system.time(step_LR_model <- full_LR_model %>% stepAIC(trace = FALSE))
+summary(step_LR_model)
+
+#Reference
+# http://www.sthda.com/english/articles/36-classification-methods-essentials/150-stepwise-logistic-regression-essentials-in-r/#:~:text=The%20stepwise%20logistic%20regression%20can,ref(stepwise%2Dregression)).
 
 #https://www.datacamp.com/community/tutorials/logistic-regression-R
 #https://towardsdatascience.com/machine-learning-with-r-logistic-regression-152ec20351db
-result <- predict(LR_model, newdata = test, type = 'response')
+result <- predict(step_LR_model, newdata = test, type = 'response')
 
 # optCutOff <- optimalCutoff(test$Churn, result)[1] 
-preds<- ifelse(result > 0.5, 1,0 )
+preds <- ifelse(result > 0.5, 1,0 )
 
 ## Confusion matrix and statistics
-library(caret)
 caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
 
 # https://stackoverflow.com/questions/70905642/error-in-lm-fitx-y-na-nan-inf-in-x-in-r
 
+library(pROC)
+roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+#Reference
+# https://rviews.rstudio.com/2019/03/01/some-r-packages-for-roc-curves/
+# https://github.com/xrobin/pROC/wiki/FAQ---Frequently-asked-questions
 ```
 
-```{r setup, include=FALSE}
+```{r}
 #Naive Bayes
 library('e1071')
- m <- naiveBayes(as.factor(any_complication) ~ ., data = train)
- m$tables
- print(m)
+set.seed(1)
+system.time(NB_model <- naiveBayes(as.factor(any_complication) ~ ., data = train_smote))
+ # m$tables
+ # print(m)
 
+ preds <- predict(NB_model, test)
 
- y_pred <- predict(m, test)
-#
- table(y_pred, test$any_complication)
-#
- cm <- table(y_pred, new_test$any_complication)
- cm
+ # table(y_pred, test$any_complication)
+ 
+caret::confusionMatrix(preds, factor(test$any_complication), mode = "everything", positive = "1")
+
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
 
 ```
 
-```{r setup, include=FALSE}
+```{r}
 #Random Forest
 library(randomForest)
-
-train_RF <- train
-train_RF$any_complication <- as.character(train_RF$any_complication)
-train_RF$any_complication <- as.factor(train_RF$any_complication)
-
-RF_model <- randomForest(any_complication ~., data=train_RF, proximity = TRUE, na.action = na.exclude) 
+set.seed(1)
+system.time(RF_model <- randomForest(any_complication ~., data = train_smote, proximity = TRUE, na.action = na.exclude))
 
 preds <- predict(RF_model, test)
 
 caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
 
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
 # https://www.r-bloggers.com/2021/04/random-forest-in-r/
 # https://discuss.analyticsvidhya.com/t/what-does-the-warning-the-response-has-five-or-fewer-unique-values-while-building-random-forest-mean/6442/2
 ```
 
-```{r setup, include=FALSE}
+```{r}
 #Neural Network
-library(neuralnet)
-
-#Fill in missing values with median to allow NN to train
-train_NN <- train
-
-for(i in 1:ncol(train_NN)) {                                   # Replace NA in all columns
-  train_NN[ , i][is.na(train_NN[ , i])] <- median(train_NN[ , i], na.rm = TRUE)
-}
-
-NN_model <- neuralnet(any_complication ~ ., data = train_NN, hidden = c(2,1), linear.output = FALSE, threshold=0.01)
-
-
-#Test the resulting output
-test_NN <- test %>% 
-  select(-any_complication)
-
-nn.results <- compute(NN_model, test_NN)
-results <- data.frame(actual = test$any_complication, prediction = nn.results$net.result)
-
-roundedresults<-sapply(results,round,digits=0)
-roundedresultsdf=data.frame(roundedresults)
-attach(roundedresultsdf)
-confusionMatrix(table(actual,prediction), positive = "1", mode = 'everything')
-# https://stackoverflow.com/questions/63770095/how-to-print-confusion-matrix-of-neuralnet-predicted-probabilities
-# https://datascienceplus.com/neuralnet-train-and-test-neural-networks-using-r/
+# library(neuralnet)
+# 
+# NN_model <- neuralnet(any_complication ~ ., data = train, hidden = c(2,1), linear.output = FALSE, threshold=0.01)
+# 
+# 
+# #Test the resulting output
+# test_NN <- test %>% 
+#   select(-any_complication)
+# 
+# nn.results <- compute(NN_model, test_NN)
+# results <- data.frame(actual = test$any_complication, prediction = nn.results$net.result)
+# 
+# roundedresults<-sapply(results,round,digits=0)
+# roundedresultsdf=data.frame(roundedresults)
+# attach(roundedresultsdf)
+# confusionMatrix(table(actual,prediction), positive = "1", mode = 'everything')
+# # https://stackoverflow.com/questions/63770095/how-to-print-confusion-matrix-of-neuralnet-predicted-probabilities
+# # https://datascienceplus.com/neuralnet-train-and-test-neural-networks-using-r/
 
 library(nnet)
-
-irispred <- nnet(any_complication ~ ., data = train_NN, size=10)
-result <- predict(irispred, newdata = test_final)
+set.seed(1)
+system.time(NN_model <- nnet::nnet(any_complication ~ ., data = train_smote, size = 10))
+result <- predict(NN_model, newdata = test)
 preds <- ifelse(result > 0.5, 1,0 )
 
-confusionMatrix(data = factor(preds), reference = factor(test_final$any_complication), mode = "everything", positive = "1")
+confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
 
-result <- predict(LR_model, newdata = new_test, type = 'response')
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
 
-# optCutOff <- optimalCutoff(test$Churn, result)[1] 
-preds<- ifelse(result > 0.5, 1,0 )
+# result <- predict(LR_model, newdata = test, type = 'response')
+# 
+# # optCutOff <- optimalCutoff(test$Churn, result)[1] 
+# preds<- ifelse(result > 0.5, 1,0 )
 
 
 ```
