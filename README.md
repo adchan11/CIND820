@@ -14,73 +14,63 @@ This repository contains the code required to evalute which features such as med
 # Table of Contents
 1. [Abstract](#abstract)
 2. [Requirements](#requirements)
-3. [Repository Content](#repository-content)
-4. [Data Preparation](#data-preparation)
-5. [Methodology](#methodology) 
-6. [Results](#results)
-7. [Study Conclusions](#study-conclusions)
+3. [Link to the Dataset](#link-to-the-dataset)
+4. [Repository Content](#repository-content)
+5. [Data Preparation](#data-preparation)
+6. [Methodology](#methodology) 
+7. [Results](#results)
+8. [Study Conclusions](#study-conclusions)
 
 # Abstract 
-### Context
-As of 2016, approximately 11% of the United States’ 85 years and older population lives within nursing homes on a long-term basis, 69% of which have at least one disability that affects their quality of life – hearing, vision, cognitive, ambulation (Roberts et al., 2018). Frequent unplanned avoidable and unavoidable transfers from the nursing home to the emergency department can further negatively impact residents’ health status, can hinder care due to gaps in communication during transition, and can be costly for Medicaid programs (Moccia & Keyes, 2021; Walsh et al., 2010). Utilizing machine learning techniques, the relationship between nursing home quality measures in the clinic, operational and safety domains and the rate of outpatient emergency department visits for long-stay nursing home patients will be explored. 
-### Problem Statement
-The initial research question for this study is as follows: 
-1.	Which measures within the following nursing home quality measure categories significantly affect the outpatient emergency department visit rate from nursing homes for long-stay patients?
-- Nursing home ownership type
-- Bed numbers and occupancy rate
-- Staffing complement and turnover 
-- Reported incidents, complaints and citations 
-- Long-stay patient quality management rating 
-- Inspection survey observed deficiencies 
-- RAI-MDS 3.0 clinical quality measures 
-- COVID-19 Incidence and Death Rate <br>
-
-Additionally, this study will be exploring the use of machine learning for prediction within the domain of nursing home quality. Thus, this study has an addition research question as follows: <br>
-
-2.	Through utilization of machine learning techniques, is it possible to predict the outpatient emergency department rate for long-stay patients utilizing long-stay nursing home quality measures? 
-### Data
-Nursing home demographics and attributes are from:
-- The Centers for Medicare & Medicaid Services (CMS) Provider Information dataset
-- The CMS MDS Quality Measures dataset
-- The CMS Medicare Survey Summary Measures dataset
-- The CMS COVID-19 dataset
-<br>
-The independent variables were chosen from the following quality domains to create a holistic representation of nursing home quality status: <br>
-
-- Operational
-- Clinical
-- Safety
-
-Aside from facility ownership type, which is a categorical variable, the independent variables are numeric and continuous.
-The dependant variable, ‘Number of outpatient emergency department visits per 1000 long-stay resident days’, is from the CMS Medicare Claims Quality Measures dataset (Measure Code 552). It is a numeric, continuous variable that is calculated as a proportion of outpatient emergency department visits per 1000 long-stay resident days. 
-
+### Context of Problem	
+Myocardial infarction (MI) refers to the loss of blood flow to the coronary artery of the heart, resulting in damage to the heart muscle due to a lack of oxygen supply (Lu, Liu, RongRong, & Zheng, 2015). The prognosis of MI is poor, with about half of patients developing complications that can worsen the trajectory of the disease or even lead to death (Golovenkin S. E., et al., 2020). Therefore, there is a strong need for clinicians to be able to predict complications of MI for more robust clinical decision making and better patient outcomes. The themes for this project are classification and predictive analytics.
+### Project Theme and Research Questions
+The themes for this project are classification and predictive analytics. The problem that this project will solve is how to predict complications of MI by addressing the following research questions: 
+1) What medical history is most important for predicting MI complications? 
+2) What symptoms at time of admission are most important for predicting MI complications? 
+3) Do therapeutic interventions influence the patient’s final outcome? If so, which class of drugs and at which time points? 
+### The Dataset
+The ‘Myocardial infarction complications’ dataset consists of 1700 rows (patients) that are described by 111 clinical attributes and 12 possible MI complications. It was collected at the Krasnoyarsk Interdistrict Clinical Hospital in Russia from 1992 through 1995 but was only released publicly in 2020 (Golovenkin, et al., 2020). 
 ### Techniques and Tools
-Python will be used across the lifecycle of this study. Three approaches will be adopted: 
-1.	Stepwise Linear Regression – will be used for model building and prediction. Chosen due to high number of features that may be highly correlated. 
-2.	Gradient Boosting (XGBoost) Regression - will be used for model building and prediction. Chosen due to robustness of algorithm for potentially semi-/non-parametric data.  
-3.	Kernel Ridge Regression – will be used for model building and prediction. Chosen due to potentially semi-parametric dataset requiring smoothing for improved performance. 
+1)	Data Cleaning: The raw data will be cleaned to address issues such as missing values, outliers, imbalanced class distribution, and invalid values. Other transformations may need to be performed to improve data quality such as standardizing and normalizing values and renaming columns or values for consistency. 
 
-### Evaluation
-Model evaluation metrics will be:
-- R2   
-- Mean Absolute Error (MAE)
-- Root Mean Square Error (RMSE)
+2)	Exploratory Analysis: The distribution of attributes will be visualized by histograms for outlier detection and skewness. Correlation matrices using correlation coefficients such as Pearson and Cramér's V will be created to determine multicollinearity and feature selection. Statistical tests such as t-test and chi-square test will be performed for hypothesis testing. 
 
+3)	Dimensionality Reduction: Feature selection by correlation analysis and feature importance using a learning vector quantization (LVQ) model will be performed.
+
+4) Predictive Modeling: The dataset will be randomly split into training and test sets by a 7:3 ratio. Synthetic Minority Over-sampling Technique (SMOTE) will be performed on the training set to improve imbalanced class distribution. Classification algorithms such as random forest, naïve Bayes, logistic regression and neural networks will be applied for predictive modeling. Confusion matrices will be created to compare accuracy, precision, and recall of each supervised learning method. Other metrics will include the ROC curve and AUC. The run-time of each model will also be compared.  
+
+The work will be performed in R Statistical Software version 4.0.3 (R Core Team, 2020) while descriptive statistics will be generated using Python version 3.8.5 (Van Rossum & Drake, 2009). The findings of this project will inform clinicians which supervised learning model is the most robust and which patient characteristics and clinical disease markers are most significant in predicting MI complications to improve disease management and prognosis.
 
 # Requirements
 
-- Python 3.0 
+R 4.0.3
+
+Required packages are as follows: 
+
+- dplyr
+- tidyr
+- rstatix
+- ggpubr
+- corrplot
+- mlbench
+- caret
+- DMwR
+- MASS
+- e1071
+- randomForest
+- nnet
+- pROC
+
+Python 3.8.5
 
 Required packages are as follows: 
 - Pandas
-- Numpy 
-- OS
-- Matplotlib.pyplot
-- Seaborn
-- Stasmodel.api 
-- Scipy.stats
-- XGBoost
+- Pandas_Profiling
+- SSL
 
+# Link to the Dataset
+https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complications_Database/12045261/3
 
 # Repository Content
 The repository content is as follows: 
