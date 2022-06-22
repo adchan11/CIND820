@@ -14,7 +14,7 @@ This repository contains the code required to evalute which features such as med
 # Table of Contents
 1. [Abstract](#abstract)
 2. [Requirements](#requirements)
-3. [Link to the Dataset](#link-to-the-dataset)
+3. [Link to the Dataset & Data Dictionary](#link-to-the-dataset-&-data-dictionary)
 4. [Repository Content](#repository-content)
 5. [Data Preparation](#data-preparation)
 6. [Methodology](#methodology) 
@@ -69,7 +69,7 @@ Required packages are as follows:
 - Pandas_Profiling
 - SSL
 
-# Link to the Dataset
+# Link to the Dataset & Data Dictionary
 https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complications_Database/12045261/3
 
 # Repository Content
@@ -78,52 +78,44 @@ The repository content is as follows:
 - The 'Checkpoints' folder contains the checkpoints of the study to date. Each model has one Python notebook checkpoint. 
 
 # Data Preparation 
-### Datasets
-Datasets were obtained from the CMS website at the following addresses for the year 2020 (as available): 
-- CMS Medicare Claims Quality Measures: https://data.cms.gov/provider-data/dataset/ijh5-nb2v
-- CMS MDS Quality Measures: https://data.cms.gov/provider-data/dataset/djen-97ju
-- CMS Provider Information: https://data.cms.gov/provider-data/dataset/4pq5-n9py
-- CMS Survey Summary: https://data.cms.gov/provider-data/dataset/tbry-pc2d
-- CMS COVID-19 Nursing Home Data: https://data.cms.gov/covid-19/covid-19-nursing-home-data
+The following attributes were extracted and/or transformed as the independent variables within the dataset: 
+- AGE
+- SEX
+- INF_ANAM
+- STENOK_AN
+- FK_STENOK
+- IBS_POST
+- DLIT_AG
+- ZSN_A
+- nr_01
+- endocr_01
+- zab_leg_01
+- zab_leg_06
+- GB, O_L_POST
+- K_SH_POST
+- MP_TP_POST
+- IM_PG_P
+- GIPO_K
+- Systolic
+- K_BLOOD
+- NA_BLOOD
+- L_BLOOD
+- ROE
+- n_p_ecg_p_12
+- fibr_ter_02
+- NA_KB
+- NOT_NA_KB
+- NITR_S
+- NA_R_1_n
+- NA_R_2_n
+- NA_R_3_n
+- LID_S_n
+- B_BLOK_S_n
+- ANT_CA_S_n
+- ASP_S_n
+- TIKL_S_n
 
-The following attributes were extracted from the above datasets as the independent variables within the dataset: 
-- Federal Provider Number
-- Provider Name
-- Ownership Type 
-- Number of Certified Beds
-- Average Number of Residents per Day
-- Long-Stay QM Rating
-- Total nursing staff turnover
-- Registered Nurse turnover 
-- Adjusted Nurse Aide Staffing Hours per Resident per Day                                            
-- Adjusted LPN Staffing Hours per Resident per Day                                                  
-- Adjusted RN Staffing Hours per Resident per Day
-- Number of Facility Reported Incidents
-- Number of Substantiated Complaints
-- Number of Citations from Infection Control Inspections
-- Percentage of high risk long-stay residents with pressure ulcers
-- Percentage of long-stay residents assessed and appropriately given the pneumococcal vaccine
-- Percentage of long-stay residents assessed and appropriately given the seasonal influenza vaccine
-- Percentage of long-stay residents experiencing one or more falls with major injury
-- Percentage of long-stay residents who have depressive symptoms 
-- Percentage of long-stay residents who lose too much weight
-- Percentage of long-stay residents who received an antianxiety or hypnotic medication
-- Percentage of long-stay residents who received an antipsychotic medication
-- Percentage of long-stay residents who were physically restrained
-- Percentage of long-stay residents whose ability to move independently worsened
-- Percentage of long-stay residents whose need for help with daily activities has increased
-- Percentage of long-stay residents with a catheter inserted and left in their bladder
-- Percentage of long-stay residents with a urinary tract infection
-- Percentage of low risk long-stay residents who lose control of their bowels or bladder
-- Total Number of Health Deficiencies
-- Total Number of Fire Safety Deficiencies
-- Confirmed COVID-19 Cases Per Occupied Beds
-- COVID-19 Deaths Per Occupied Beds
-
-The dependent variable for this study was also extracted from the CMS Claims Data Set: 
-- Adjusted Score (Number of outpatient emergency department visits per 1000 long-stay resident days)
-
-The dataset from the 'Constructed_Dataset' folder may be used at this point for the next stages of the study. 
+There are 12 different class variables (i.e. complications) in the dataset but they are all severely imbalanced. Therefore, a new class variable titled ‘any_complication’ will be derived from all 12 class variables such that 0/FALSE means the patient had no complications at all and 1/TRUE means the patient had one or more complications. 
 
 # Methodology 
 The study methdology was as follows: 
