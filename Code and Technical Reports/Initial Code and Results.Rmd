@@ -5,8 +5,6 @@ output:
   html_document: default
   word_document: default
   pdf_document: default
-editor_options: 
-  chunk_output_type: console
 ---
 <center> <h1> Initial Results and Code </h1> </center>
 <center>  <h3> [Author: Adrian Chan] </h2> </center>
@@ -88,7 +86,7 @@ df <- df %>%
 
 Distribution of Attributes
 -variables with too much missing data are removed
-```{r fig.align="center", echo = FALSE,fig.height = 15, fig.width = 10}
+```{r fig.align="center", echo = TRUE,fig.height = 15, fig.width = 10}
 #Create histograms 
 
 # To save histograms as PNG files only. Comment out for technical report. 
@@ -124,7 +122,7 @@ df <- df %>%
 ```
 
 Boxplots of Numeric Attributes
-```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
 #Box plots using t-test
 library(rstatix)
 library(ggpubr)
@@ -185,7 +183,7 @@ corrplot(cor(df_corr_numeric, use = 'pairwise.complete.obs'), p.mat = testRes$p,
 ```
 
 Correlation Plot for Binary Variables
-```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
 #Correlation plot for binary variables
 #Phi Coefficient correlation
 
@@ -238,7 +236,7 @@ corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes_2
 ```
 
 Correlation Plot for Categorical Variables
-```{r fig.align="center", echo = FALSE,fig.height = 10, fig.width = 10}
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
 #Correlation plot for categorical variables
 #Cramér's V
 library(corrplot)
@@ -361,6 +359,9 @@ print(age_BN)
 
 systolic_BN <- bestNormalize(df$Systolic, standardize = FALSE, allow_lambert_h = TRUE)
 print(systolic_BN)
+
+#Althougth bestNormalize showed arcsinh(x) as the best transformation, skewness actually increased afterwards. Therefore, we will manually use orderNorm.
+systolic_BN <- orderNorm(df$Systolic, standardize = FALSE)
 
 L_BLOOD_BN <- bestNormalize(df$L_BLOOD, standardize = FALSE, allow_lambert_h = TRUE)
 print(L_BLOOD_BN)
