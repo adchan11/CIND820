@@ -224,6 +224,7 @@ B_BLOK_S_n     0.5327
 
 <b>Most Stastistically Significant Features by Correlation Analysis<b>
 | Variable         |
+| ---------------- |
 | AGE              |
 | SEX              |
 | INF\_ANAM        |
