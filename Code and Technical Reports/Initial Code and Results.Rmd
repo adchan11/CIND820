@@ -11,6 +11,12 @@ output:
 <center>  <h3> [Supervisor: Dr. Sedef Akinli Kocak] </h2> </center>
 <center> <h3> [CIND 820: DA0 & 501051583] </h2> </center>
 ---
+
+```{r setup, include=FALSE} 
+#Supress warnings and messages in knit file
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 ******
 \newpage
 ## Data Cleaning
@@ -47,6 +53,8 @@ drugs_var <- c(75:82, 96:112)
 
 df <- df_raw %>% 
   dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), "any_complication"))
+
+# writeLines(strwrap(paste("- ", colnames(df))))
 ```
 
 Outliers are removed and transformations are done on select input features to ensure consistency and data quality.
@@ -84,8 +92,34 @@ df <- df %>%
 \newpage
 ## Exploratory Analysis
 
+Descriptive Statistics
+
+```{r}
+
+library(DataExplorer)
+#Overview of Dataset
+introduce(df_raw)
+
+#Check strcture of dataset
+str(df_raw, list.len=ncol(df_raw))
+
+#Number of variable types
+table(sapply(df_raw, class))
+
+#Check for Missing Values
+plot_intro(df_raw)
+
+#No Duplicated Rows
+anyDuplicated(df_raw)
+
+#Quantile Distribution
+raw_numeric_cols <- c(2, 35, 36, 37, 38, 84, 86, 87, 88, 89, 90, 91)
+df_numeric_raw <- df_raw[, raw_numeric_cols]
+summary(df_numeric_raw)
+
+```
+
 Distribution of Attributes
--variables with too much missing data are removed
 ```{r fig.align="center", echo = TRUE,fig.height = 15, fig.width = 10}
 #Create histograms 
 
@@ -164,7 +198,7 @@ df_boxplots +stat_pvalue_manual(df_stats, label = "p.signif") +
 Correlation Plot for Numeric Variables
 ```{r}
 #Correlation plot for numeric variables
-#Point-Biserial coefficient with t-test for significance
+#Point-Biserial coefficient between numeric and binary attributes and Pearson coefficient between numeric attributes with t-test for significance
 library(corrplot)
 
 #Select only numeric variables
@@ -284,7 +318,7 @@ sig_cols <- setdiff(sig_cols, drop_multicollinear_cols)
 ```
 
 Feature Importance
-```{r}
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
 #Feature Importance using the LVQ Method
 set.seed(1)
 # load the library
