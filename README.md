@@ -164,7 +164,7 @@ The study methdology was as follows:
 
 | Step | Description |
 | ------------- | ------------- |
-| DATA CLEANING & PREPARATION | Fix and remove incorrect, corrupted, incorrectly formatted, duplicate, missing or incomplete data. Perform data normalization and standardization. |
+| DATA CLEANING and  PREPARATION | Fix and remove incorrect, corrupted, incorrectly formatted, duplicate, missing or incomplete data. Perform data normalization and standardization. Perform data transformations as needed. |
 | EXPLORATORY ANALYSIS | Descriptive statistics, univariate distribution analysis (histograms), statistical hypothesis testing, correlation analysis. |
 | DIMENSIONALITY REDUCTION | Feature selection by correlation analysis and rank importance. |
 | PREDICTIVE MODELING | Split model into training and testing sets. Perform SMOTE to fix imbalance class distribution. Apply supervised learning machine learning methods. |
