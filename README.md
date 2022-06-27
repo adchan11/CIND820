@@ -191,7 +191,7 @@ The following 4 models were built and evaluated:
 <b>Rank of Feature Importance<b>
  
  <p align="center">
-  <img src="[Figures/Feature Importance.png](https://github.com/adchan11/CIND820/blob/main/Figures/Feature%20Importance.png)">
+  <img src="Figures/Feature Importance.png">
 </p>
  
  ```
