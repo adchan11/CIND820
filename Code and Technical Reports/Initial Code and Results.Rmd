@@ -507,7 +507,7 @@ caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "eve
 library(pROC)
 roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)
@@ -533,7 +533,7 @@ caret::confusionMatrix(preds, factor(test$any_complication), mode = "everything"
 #Create ROC and AUC
 roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)
@@ -557,7 +557,7 @@ caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "eve
 #Create ROC and AUC
 roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)
@@ -585,7 +585,7 @@ confusionMatrix(data = factor(preds), reference = factor(test$any_complication),
 #Create ROC and AUC
 roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)

@@ -249,7 +249,9 @@ symptoms_var &lt;-c(9:10, 35:43, 49, 83:91)
 drugs_var &lt;- c(75:82, 96:112)
 
 df &lt;- df_raw %&gt;% 
-  dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), &quot;any_complication&quot;))</code></pre>
+  dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), &quot;any_complication&quot;))
+
+# writeLines(strwrap(paste(&quot;- &quot;, colnames(df))))</code></pre>
 <p>Outliers are removed and transformations are done on select input features to ensure consistency and data quality.</p>
 <pre class="r"><code>#Transform Blood Pressure Variables
 
@@ -984,7 +986,7 @@ system.time(full_LR_model &lt;- glm(any_complication ~.,family = binomial(link =
 library(MASS)
 system.time(step_LR_model &lt;- full_LR_model %&gt;% stepAIC(trace = FALSE))</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.625   0.000   0.625</code></pre>
+##   0.637   0.002   0.639</code></pre>
 <pre class="r"><code>summary(step_LR_model)</code></pre>
 <pre><code>## 
 ## Call:
@@ -1074,7 +1076,7 @@ caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = &quo
 library(pROC)
 roc &lt;- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)</code></pre>
@@ -1088,7 +1090,7 @@ roc &lt;- roc(response = test$any_complication, predictor = preds, smoothed = TR
 set.seed(1)
 system.time(NB_model &lt;- naiveBayes(as.factor(any_complication) ~ ., data = train_smote))</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.008   0.000   0.008</code></pre>
+##   0.008   0.000   0.009</code></pre>
 <pre class="r"><code>#Predict results using test dataset
 preds &lt;- predict(NB_model, test)
 
@@ -1127,7 +1129,7 @@ caret::confusionMatrix(preds, factor(test$any_complication), mode = &quot;everyt
 <pre class="r"><code>#Create ROC and AUC
 roc &lt;- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)</code></pre>
@@ -1139,7 +1141,7 @@ library(randomForest)
 set.seed(1)
 system.time(RF_model &lt;- randomForest(any_complication ~., data = train_smote, proximity = TRUE, na.action = na.exclude))</code></pre>
 <pre><code>##    user  system elapsed 
-##   4.662   0.091   4.753</code></pre>
+##   4.593   0.097   4.690</code></pre>
 <pre class="r"><code>#Predict results using test dataset
 preds &lt;- predict(RF_model, test)
 
@@ -1178,7 +1180,7 @@ caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = &quo
 <pre class="r"><code>#Create ROC and AUC
 roc &lt;- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)</code></pre>
@@ -1207,7 +1209,7 @@ system.time(NN_model &lt;- nnet::nnet(any_complication ~ ., data = train_smote, 
 ## final  value 604.686532 
 ## stopped after 100 iterations</code></pre>
 <pre><code>##    user  system elapsed 
-##    0.39    0.00    0.39</code></pre>
+##   0.393   0.001   0.395</code></pre>
 <pre class="r"><code>#Predict results using test dataset
 result &lt;- predict(NN_model, newdata = test)
 preds &lt;- ifelse(result &gt; 0.5, 1,0 )
@@ -1247,7 +1249,7 @@ confusionMatrix(data = factor(preds), reference = factor(test$any_complication),
 <pre class="r"><code>#Create ROC and AUC
 roc &lt;- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
             # arguments for ci
-            ci=TRUE, ci.alpha=0.9, stratified=FALSE,
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)</code></pre>
