@@ -61,6 +61,8 @@ Required packages are as follows:
 - randomForest
 - nnet
 - pROC
+- bestNormalize
+- DataExplorer
 
 # Link to the Dataset and Data Dictionary
 https://leicester.figshare.com/articles/dataset/Myocardial_infarction_complications_Database/12045261/3
