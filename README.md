@@ -188,7 +188,7 @@ The following 4 models were built and evaluated:
 | Recall | 0.6921 | 0.4901 | 0.6689 | 0.5662 |
 | F1 Score | 0.7295 | 0.6154 | 0.7201 | 0.6502 |
 | AUC | 0.693 | 0.668 | 0.693 | 0.652 |
-| Training Run Time  | 4.753 s | 0.008 s | 0.637 s | 0.39 s |
+| Training Run Time  | 4.690 s | 0.009 s | 0.651 s | 0.395 s |
 
 <b>Rank of Feature Importance<b>
  
