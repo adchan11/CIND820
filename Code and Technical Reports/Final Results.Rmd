@@ -1,0 +1,714 @@
+---
+title: "Applications of Supervised Machine Learning Methods for the Prediction of Myocardial Infarction Complications in Hospital Patients"
+author: 
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+<center> <h1> Initial Results and Code </h1> </center>
+<center>  <h3> [Author: Adrian Chan] </h2> </center>
+<center>  <h3> [Supervisor: Dr. Sedef Akinli Kocak] </h2> </center>
+<center> <h3> [CIND 820: DA0 & 501051583] </h2> </center>
+---
+
+```{r setup, include=FALSE} 
+#Supress warnings and messages in knit file
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+******
+\newpage
+## Data Cleaning
+
+Data is loaded and the class variable is created. Features are selected based on the research questions.
+```{r}
+#Load libraries
+library(dplyr)
+library(tidyr)
+
+#Load data
+
+df_raw <- read.table("https://leicester.figshare.com/ndownloader/files/23581310", sep = ",", header = TRUE, stringsAsFactors = FALSE)
+
+#Create new class variable
+
+df_comp <- df_raw[113:124]
+
+df_comp$LET_IS_binary <- ifelse(df_comp$LET_IS == 0, 0, 1)
+
+df_comp <- df_comp %>%
+  select(-LET_IS)
+
+df_comp$any_complication <- rowSums(df_comp)
+
+df_comp$any_complication <- ifelse(df_comp$any_complication == 0, 0, 1)
+
+df_raw$any_complication <- df_comp$any_complication
+
+#Select only relevant features based on scope of research questions
+medical_history_var <- c(4:8, 11:12, 13:34)
+symptoms_var <-c(9:10, 35:43, 49, 83:91)
+drugs_var <- c(75:82, 96:112)
+
+df <- df_raw %>% 
+  dplyr:::select(c(2:3, all_of(medical_history_var), all_of(symptoms_var), all_of(drugs_var), "any_complication"))
+
+# writeLines(strwrap(paste("- ", colnames(df))))
+```
+
+Outliers are removed and transformations are done on select input features to ensure consistency and data quality.
+```{r}
+#Transform Blood Pressure Variables
+
+#Remove rows where any of the blood pressure variables equal 0
+
+df <- df %>% 
+  mutate(has_zero = if_any(c(S_AD_KBRIG, D_AD_KBRIG, S_AD_ORIT, D_AD_ORIT), ~ . == 0)) %>%
+  mutate(has_zero = ifelse(is.na(has_zero), FALSE, has_zero)) %>%
+  filter(has_zero == FALSE) %>%
+  select(-has_zero)
+
+#Transform new systolic and diastolic variables 
+
+df$Systolic <- ifelse(is.na(df$S_AD_KBRIG) | is.na(df$S_AD_ORIT), coalesce(df$S_AD_KBRIG, df$S_AD_ORIT), 
+                      (df$S_AD_KBRIG + df$S_AD_ORIT) / 2)
+
+length(which(is.na(df$Systolic)))
+
+df$Diastolic <- ifelse(is.na(df$D_AD_KBRIG) | is.na(df$D_AD_ORIT), coalesce(df$D_AD_KBRIG, df$D_AD_ORIT), 
+                      (df$D_AD_KBRIG + df$D_AD_ORIT) / 2)
+
+length(which(is.na(df$Diastolic)))
+
+#Remove pre-existing blood pressure variables and just keep Systolic blood pressure since both Systolic and Diastolic have the same number of missing data
+
+df <- df %>%
+  select(-c('S_AD_KBRIG', 'S_AD_ORIT', 'D_AD_KBRIG', 'D_AD_ORIT', 'Diastolic')) %>%
+  relocate(Systolic, .before = K_BLOOD)
+```
+
+******
+\newpage
+## Exploratory Analysis
+
+Descriptive Statistics
+
+```{r}
+
+library(DataExplorer)
+#Overview of Dataset
+introduce(df_raw)
+
+#Check strcture of dataset
+str(df_raw, list.len=ncol(df_raw))
+
+#Number of variable types
+table(sapply(df_raw, class))
+
+#Check for Missing Values
+plot_intro(df_raw)
+
+#No Duplicated Rows
+anyDuplicated(df_raw)
+
+#Quantile Distribution
+raw_numeric_cols <- c(2, 35, 36, 37, 38, 84, 86, 87, 88, 89, 90, 91)
+df_numeric_raw <- df_raw[, raw_numeric_cols]
+summary(df_numeric_raw)
+
+```
+
+Distribution of Attributes
+```{r fig.align="center", echo = TRUE,fig.height = 15, fig.width = 10}
+#Create histograms 
+
+# To save histograms as PNG files only. Comment out for technical report. 
+# misfun <- function(z) {paste(
+#   paste(c('n', 'm'), table(factor(as.double(is.na(z)), levels = 0:1)), sep = ':'), 
+#   collapse = ' ')}
+# 
+# num1 <- 1
+# num2 <- 20
+# for (i in 1:(ceiling(length(df)/20))) {
+# 
+# if (i == 4) {
+#   num2 <- 75
+# }
+# png(paste0('hist', i, '.png'), 1000, 1000)
+# par(mfrow=c(5,4))
+# 
+# df_new <- df[num1:num2]
+# lapply(names(df_new), function(x) hist(df_new[[x]], main=x, xlab=misfun(df_new[x]),  cex.lab=1.5, cex.axis=1.5, cex.main = 1.5, cex.sub=1.5,
+#                                    breaks = 'FD'))
+# dev.off()
+# num1 <- num2 + 1
+# num2 <- 20 * (1 + i)
+# }
+
+library(Hmisc)
+Hmisc::hist.data.frame(df, n.unique = 1)
+
+#Drop variables with too much missing data
+
+df <- df %>%
+  select(-c("KFK_BLOOD", "IBS_NASL"))
+```
+
+Boxplots of Numeric Attributes
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
+#Box plots using t-test
+library(rstatix)
+library(ggpubr)
+
+#Do not include KFK_BLOOD (variable 89) as it only has 4 records and the rest are missing values
+numeric_cols = c("AGE", "Systolic", "K_BLOOD", "NA_BLOOD", "ALT_BLOOD", "AST_BLOOD", "L_BLOOD", "ROE")
+
+df_numeric <- df %>% 
+  select(any_of(c(numeric_cols, "any_complication")))
+
+df_long <- df_numeric %>%
+  pivot_longer(-`any_complication`, names_to = "variables", values_to = "value") %>%
+  as.data.frame()
+
+#Remove NA values
+df_long <- df_long[!is.na(df_long$value),]
+
+#Generate boxplots and include t-test significance results
+df_stats <- df_long %>%
+  group_by(variables) %>%
+  t_test(value ~ any_complication) %>%
+  # adjust_pvalue(method = "BH") %>%
+  add_significance()
+
+df_boxplots <- ggboxplot(
+  df_long, x = "any_complication", y = "value",
+  fill = "any_complication", palette = "npg", legend = "none", order = NULL,
+  ggtheme = theme_pubr(border = TRUE)
+  ) +
+  facet_wrap(~variables ,scales = "free_y") 
+
+df_stats <- df_stats %>% 
+  add_xy_position(x = "any_complication", scales = 'free', step.increase = 1) 
+
+df_boxplots +stat_pvalue_manual(df_stats, label = "p.signif") + 
+ font("title", size = 14,  face = "bold")+
+ font("xy.text", size = 12, face = "bold")
+```
+Correlation Plot for Numeric Variables
+```{r}
+#Correlation plot for numeric variables
+#Point-Biserial coefficient between numeric and binary attributes and Pearson coefficient between numeric attributes with t-test for significance
+library(corrplot)
+
+#Select only numeric variables
+df_corr_numeric <- df_numeric 
+
+#Generate significance values at confidence level = 0.95
+testRes <- cor.mtest(df_corr_numeric, conf.level = 0.95) 
+
+#Generate correlation plot with statistical significance
+corrplot(cor(df_corr_numeric, use = 'pairwise.complete.obs'), p.mat = testRes$p, method = "color", diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
+         insig = 'label_sig', pch.col = 'purple')
+
+
+# Reference: http://web.pdx.edu/~newsomj/pa551/lectur15.htm
+```
+
+Correlation Plot for Binary Variables
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
+#Correlation plot for binary variables
+#Phi Coefficient correlation
+
+#Select binary attributes only
+binary_cols <- c(3, 8, 10, 13:34, 39:44, 49:74, 76:83, 85, 96:99, 106:112)
+df_corr_binary_raw <- df_raw[binary_cols]
+df_corr_binary <- df %>% 
+  select(any_of(c(colnames(df_corr_binary_raw), "any_complication")))
+
+#Split into two datasets so that the correlation plot is easier to read 
+
+df_corr_binary_1 <- df_corr_binary[c(1:24, 51)]
+df_corr_binary_2 <- df_corr_binary[25:51]
+
+#Function to generate a matrix of chi-square test values
+chisqmatrix <- function(x) {
+  names <- colnames(x);  num = length(names)
+  m <- matrix(nrow=num,ncol=num,dimnames=list(names,names))
+  for (i in 1:(num-1)) {
+    for (j in (i+1):num) {
+      m[i,j] <- tryCatch(
+        {chisq.test(x[,i],x[,j],simulate.p.value = TRUE)$p.value
+        },
+        error=function(x){
+          return(NA)
+        }
+      )
+    }
+  }
+  return (m)
+}
+
+#Generate significance values
+testRes_1 <- chisqmatrix(df_corr_binary_1)
+testRes_2 <- chisqmatrix(df_corr_binary_2)
+
+#Generate correlation plot with statistical significance
+corrplot(cor(df_corr_binary_1, use = "pairwise.complete.obs"), p.mat = testRes_1, method = "color", diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.8, 
+         insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
+
+corrplot(cor(df_corr_binary_2, use = "pairwise.complete.obs"), p.mat = testRes_2, method = "color", diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.8, 
+         insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
+
+# References:
+# https://stat.ethz.ch/pipermail/r-help/2015-April/428127.html
+# http://web.pdx.edu/~newsomj/pa551/lectur15.htm
+# http://www.ce.memphis.edu/7012/L17_CategoricalVariableAssociation.pdf
+```
+
+Correlation Plot for Categorical Variables
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
+#Correlation plot for categorical variables
+#Cramér's V
+library(corrplot)
+
+#Select ordinal variables only
+ordinal_cols <- c(4, 5, 6, 7, 9, 11, 12, 45:48, 92:95, 100:105)
+
+df_corr_ordinal_raw <- df_raw[ordinal_cols]
+df_corr_ordinal <- df %>% 
+  select(any_of(c(colnames(df_corr_ordinal_raw), "any_complication")))
+
+#Create matrix of chi-square test values
+mat <- chisqmatrix(df_corr_ordinal)
+
+#Generate correlation plot with chi-square test significance 
+corrplot::corrplot(DescTools::PairApply(df_corr_ordinal, DescTools::CramerV), p.mat = mat, method = 'color', diag = FALSE, type = 'upper',
+         sig.level = c(0.001, 0.01, 0.05), pch.cex = 0.9, 
+         insig = 'label_sig', pch.col = 'purple', na.label = "NA", number.cex = 0.5, tl.cex = 0.8)
+
+# Reference:
+# https://stackoverflow.com/questions/32732582/chi-square-p-value-matrix-in-r
+```
+\newpage
+## Dimensionality Reduction
+
+Feature Selection
+```{r}
+not_sig_cols <- c('ALT_BLOOD', 'AST_BLOOD', "SIM_GIPERT", "nr_11", 'nr_01', 'nr_02', 'nr_07', 'nr_08', 'np_01', 'np_04', 'np_05', 'np_07', 'np_08', 'np_09', 'np_10', 'endocr_02', 'endocr_03', 'zab_leg_01', 'zab_leg_04', 'zab_leg_06', 'SVT_POST', 'GT_POST', 'fibr_ter_01', 'fibr_ter_03', 'fibr_ter_05', 'fibr_ter_06', 'fibr_ter_07', 'fibr_ter_08', 'GIPER_NA', 'NOT_NA_KB', 'LID_KB', 'GEPAR_S_n', 'TRENT_S_n', 'IBS_POST', 'NOT_NA_1_n', 'NOT_NA_2_n', 'NOT_NA_3_n')
+
+#These are the variables that are not statistically significant with the class variable
+print(not_sig_cols)
+
+#These are the variables that are statistically significant with the class variable
+sig_cols <- df %>% 
+  select(-all_of(c(not_sig_cols, 'any_complication'))) %>%
+  colnames()
+
+print(sig_cols)
+
+#Remove multicollinear variables based on subject matter expertise
+drop_multicollinear_cols <- c('NA_BLOOD', 'LID_S_n')
+
+sig_cols <- setdiff(sig_cols, drop_multicollinear_cols)
+                      
+```
+
+Feature Importance
+```{r fig.align="center", echo = TRUE,fig.height = 10, fig.width = 10}
+#Feature Importance using the LVQ Method
+set.seed(1)
+# load the library
+library(mlbench)
+library(caret)
+
+#Imputation of missing values using the median
+for(i in 1:ncol(df)) {                                   # Replace NA in all columns
+  df[ , i][is.na(df[ , i])] <- median(df[ , i], na.rm = TRUE)
+}
+
+df_lvq <- df
+
+#Convert class variable to factor
+df_lvq$any_complication <- as.character(df_lvq$any_complication)
+df_lvq$any_complication <- as.factor(df_lvq$any_complication)
+
+# prepare training scheme 
+control <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+# train the model
+model <- train(any_complication ~., data = df_lvq, method = "lvq", preProcess = "scale", trControl = control)
+# estimate variable importance
+importance <- varImp(model, scale=FALSE)
+# summarize importance
+print(importance)
+# plot importance
+plot(importance)
+
+#Obtain list of top 20 important variables
+library(tibble)
+imp_cols <- importance$importance 
+imp_cols <- tibble::rownames_to_column(imp_cols, "Variables") %>%
+  arrange(desc(X0))
+imp_cols_string <- imp_cols[1:20, 'Variables']
+
+#Compare feature importance with correlation analysis 
+selected_features <- Reduce(intersect, list(imp_cols_string, sig_cols))
+
+#Based on feature importance and correlation analysis, these will be our input features for predictive modeling
+df <- df %>% select(all_of(c(selected_features, 'any_complication')))
+print(selected_features)
+
+#Reference
+# https://machinelearningmastery.com/feature-selection-with-the-caret-r-package/
+
+```
+
+\newpage
+## Data Pre Processing
+
+```{r}
+#Distribution of Numeric Attributes before transformations
+df_numeric_before <- df %>%
+  select(any_of(numeric_cols))
+
+hist.data.frame(df_numeric_before, n.unique = 1)
+
+#Measure skewness before transformation
+library('e1071')
+
+for (i in 1:length(colnames(df_numeric_before))) {
+  
+  print(paste0(colnames(df_numeric_before)[i], " : ", skewness(df_numeric_before[,i])))
+  
+}
+
+#Data Normalization - automatically select the best method
+library(bestNormalize)
+
+age_BN <- bestNormalize(df$AGE, standardize = FALSE, allow_lambert_h = TRUE)
+print(age_BN)
+
+systolic_BN <- bestNormalize(df$Systolic, standardize = FALSE, allow_lambert_h = TRUE)
+print(systolic_BN)
+
+#Althougth bestNormalize showed arcsinh(x) as the best transformation, skewness actually increased afterwards. Therefore, we will manually use orderNorm.
+systolic_BN <- orderNorm(df$Systolic, standardize = FALSE)
+
+L_BLOOD_BN <- bestNormalize(df$L_BLOOD, standardize = FALSE, allow_lambert_h = TRUE)
+print(L_BLOOD_BN)
+
+ROE_BN <- bestNormalize(df$ROE, standardize = FALSE, allow_lambert_h = TRUE)
+print(ROE_BN)
+
+K_BLOOD_BN <- bestNormalize(df$K_BLOOD, standardize = FALSE, allow_lambert_h = TRUE)
+print(K_BLOOD_BN)
+
+df$AGE <- age_BN$x.t
+df$Systolic <- systolic_BN$x.t
+df$L_BLOOD <- L_BLOOD_BN$x.t
+df$ROE <-ROE_BN$x.t 
+df$K_BLOOD <- K_BLOOD_BN$x.t 
+
+#Data Scaling
+
+#Custom function to implement min max scaling
+minMax <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+#Apply minMax function to all numeric attributes
+df <- df %>% 
+  mutate(across(any_of(numeric_cols), minMax))
+
+#Distribution of Numeric Attributes after Data Scaling and Data Normalization
+df_numeric_after <- df %>%
+  select(any_of(numeric_cols))
+
+hist.data.frame(df_numeric_after, n.unique = 1)
+
+#Measure skewness after transformation
+for (i in 1:length(colnames(df_numeric_after))) {
+  
+  print(paste0(colnames(df_numeric_after)[i], " : ", skewness(df_numeric_after[,i])))
+  
+}
+
+#Reference:
+# https://www.geeksforgeeks.org/how-to-normalize-and-standardize-data-in-r/
+# https://cran.r-project.org/web/packages/bestNormalize/vignettes/bestNormalize.html
+
+```
+
+******
+\newpage
+## Train/Test Split and K-Fold Cross Validation
+```{r}
+#Train/test split
+set.seed(1)
+index <- sort(sample(nrow(df), nrow(df)*.7))
+
+#Convert class variable to factor
+df$any_complication <- as.character(df$any_complication)
+df$any_complication <- as.factor(df$any_complication)
+
+train <- df[index,]
+test <- df[-index,]
+
+train_ctrl <- trainControl(method = "cv", number = 10, sampling = "smote", savePredictions=TRUE)
+
+# #Apply SMOTE to fix imbalanced class distribution
+# library(DMwR)
+# 
+# train_smote <- DMwR::SMOTE(any_complication ~ ., data = train, perc.over = 154)
+
+# #Before SMOTE
+# table(train$any_complication)
+# #After SMOTE
+# table(train_smote$any_complication)
+
+#Reference
+# https://www.statology.org/smote-in-r/
+# https://www.statology.org/k-fold-cross-validation-in-r/
+# https://stackoverflow.com/questions/60020654/when-using-the-train-function-with-cross-validation-train-control-how-do-you
+```
+
+
+******
+\newpage
+## Predictive Modeling - without hyperparameter tuning
+```{r}
+#Logistic Regression
+set.seed(1)
+
+#Train model
+system.time(full_LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train, na.action = na.omit))
+summary(full_LR_model)
+
+#Reference
+# https://datascienceplus.com/perform-logistic-regression-in-r/#:~:text=Logistic%20regression%20is%20a%20method,general%2C%20can%20assume%20different%
+
+#Predict results using test dataset
+result <- predict(full_LR_model, newdata = test, type = 'response')
+
+preds <- ifelse(result > 0.5, 1,0 )
+
+#Confusion matrix and statistics
+caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
+
+#Reference
+# https://stackoverflow.com/questions/70905642/error-in-lm-fitx-y-na-nan-inf-in-x-in-r
+
+#Create ROC and AUC
+library(pROC)
+roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+#Reference
+# https://rviews.rstudio.com/2019/03/01/some-r-packages-for-roc-curves/
+# https://github.com/xrobin/pROC/wiki/FAQ---Frequently-asked-questions
+```
+
+```{r}
+#Naive Bayes
+
+#Train model
+set.seed(1)
+system.time(NB_model <- naiveBayes(as.factor(any_complication) ~ ., data = train))
+
+#Predict results using test dataset
+preds <- predict(NB_model, test)
+
+#Confusion matrix and statistics
+caret::confusionMatrix(preds, factor(test$any_complication), mode = "everything", positive = "1")
+
+#Create ROC and AUC
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+```
+
+```{r}
+#Random Forest
+
+#Train model
+library(randomForest)
+set.seed(1)
+system.time(RF_model <- randomForest(any_complication ~., data = train, proximity = TRUE, na.action = na.exclude))
+
+#Predict results using test dataset
+preds <- predict(RF_model, test)
+
+#Confusion matrix and statistics
+caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
+
+#Create ROC and AUC
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+#References
+# https://www.r-bloggers.com/2021/04/random-forest-in-r/
+# https://discuss.analyticsvidhya.com/t/what-does-the-warning-the-response-has-five-or-fewer-unique-values-while-building-random-forest-mean/6442/2
+```
+
+```{r}
+#Neural Network
+
+#Train model
+library(nnet)
+set.seed(1)
+system.time(NN_model <- nnet::nnet(any_complication ~ ., data = train, size = 10))
+
+#Predict results using test dataset
+result <- predict(NN_model, newdata = test)
+preds <- ifelse(result > 0.5, 1,0 )
+
+#Confusion matrix and statistics
+confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
+
+#Create ROC and AUC
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+
+```
+******
+\newpage
+## Predictive Modeling - with hyperparameter tuning and SMOTE/K-fold Cross Validation
+```{r}
+#Logistic Regression
+set.seed(1)
+
+#Perform Stepwise Logistic Regression
+step_LR_model_tuned <- train(any_complication ~.,
+                     df,
+                     method="glmStepAIC", # Step wise AIC
+                     family="binomial", # Logistic regression is specified
+                     direction="both", # Stepwise selection
+                     trace = F,
+                     trControl=train_ctrl)
+summary(step_LR_model_tuned)
+
+#Reference
+# https://stackoverflow.com/questions/70938683/caret-cross-validation-following-stepwise-selection-question-on-mechanism
+
+#Predict results using test dataset
+# preds <- predict(step_LR_model_tuned)
+
+#Confusion matrix and statistics
+caret::confusionMatrix(step_LR_model_tuned$pred$pred, step_LR_model_tuned$pred$obs, mode = "everything", positive = '1')
+
+#Reference
+# https://community.rstudio.com/t/compute-confusion-matrix-using-k-fold-cross-validation-in-caret-train/42412/3
+
+#Create ROC and AUC
+library(pROC)
+roc <- roc(response = as.numeric(step_LR_model_tuned$pred$obs), predictor = as.numeric(step_LR_model_tuned$pred$pred), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+#Reference
+# https://rviews.rstudio.com/2019/03/01/some-r-packages-for-roc-curves/
+# https://github.com/xrobin/pROC/wiki/FAQ---Frequently-asked-questions
+```
+
+```{r}
+#Naive Bayes
+
+#Train model
+set.seed(1)
+system.time(NB_model_tuned <- train(any_complication ~.,
+                     df,
+                     method="nb", 
+                     trControl=train_ctrl))
+
+#Predict results using test dataset
+preds <- predict(NB_model, test)
+
+#Confusion matrix and statistics
+caret::confusionMatrix(NB_model_tuned$pred$pred, NB_model_tuned$pred$obs, mode = "everything", positive = '1')
+
+#Create ROC and AUC
+roc <- roc(response = as.numeric(NB_model_tuned$pred$obs), predictor = as.numeric(NB_model_tuned$pred$pred),  smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+```
+
+```{r}
+#Random Forest
+
+#Train model
+library(randomForest)
+set.seed(1)
+system.time(RF_model <- randomForest(any_complication ~., data = train, proximity = TRUE, na.action = na.exclude))
+
+#Predict results using test dataset
+preds <- predict(RF_model, test)
+
+#Confusion matrix and statistics
+caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
+
+#Create ROC and AUC
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+#References
+# https://www.r-bloggers.com/2021/04/random-forest-in-r/
+# https://discuss.analyticsvidhya.com/t/what-does-the-warning-the-response-has-five-or-fewer-unique-values-while-building-random-forest-mean/6442/2
+```
+
+```{r}
+#Neural Network
+
+#Train model
+library(nnet)
+set.seed(1)
+system.time(NN_model <- nnet::nnet(any_complication ~ ., data = train, size = 10))
+
+#Predict results using test dataset
+result <- predict(NN_model, newdata = test)
+preds <- ifelse(result > 0.5, 1,0 )
+
+#Confusion matrix and statistics
+confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
+
+#Create ROC and AUC
+roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoothed = TRUE,
+            # arguments for ci
+            ci=TRUE, ci.alpha=0.95, stratified=FALSE,
+            # arguments for plot
+            plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
+            print.auc=TRUE, show.thres=TRUE)
+
+
+```
+******
