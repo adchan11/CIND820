@@ -457,17 +457,18 @@ df$any_complication <- as.factor(df$any_complication)
 train <- df[index,]
 test <- df[-index,]
 
-train_ctrl <- trainControl(method = "cv", number = 10, sampling = "smote", savePredictions=TRUE)
+# train_ctrl <- trainControl(method = "cv", number = 10, sampling = "smote", savePredictions=TRUE)
+# train_ctrl_no_smote <- trainControl(method = "cv", number = 10, savePredictions=TRUE)
 
-# #Apply SMOTE to fix imbalanced class distribution
-# library(DMwR)
-# 
-# train_smote <- DMwR::SMOTE(any_complication ~ ., data = train, perc.over = 154)
+#Apply SMOTE to fix imbalanced class distribution
+library(DMwR)
 
-# #Before SMOTE
-# table(train$any_complication)
-# #After SMOTE
-# table(train_smote$any_complication)
+train_smote <- DMwR::SMOTE(any_complication ~ ., data = train, perc.over = 154)
+
+#Before SMOTE
+table(train$any_complication)
+#After SMOTE
+table(train_smote$any_complication)
 
 #Reference
 # https://www.statology.org/smote-in-r/
@@ -478,7 +479,7 @@ train_ctrl <- trainControl(method = "cv", number = 10, sampling = "smote", saveP
 
 ******
 \newpage
-## Predictive Modeling - without hyperparameter tuning
+## Predictive Modeling - without hyperparameter tuning and SMOTE
 ```{r}
 #Logistic Regression
 set.seed(1)
@@ -592,7 +593,7 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 ```
 ******
 \newpage
-## Predictive Modeling - with hyperparameter tuning and SMOTE/K-fold Cross Validation
+## Predictive Modeling - with hyperparameter tuning and SMOTE
 ```{r}
 #Logistic Regression
 set.seed(1)
