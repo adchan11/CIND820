@@ -444,7 +444,7 @@ for (i in 1:length(colnames(df_numeric_after))) {
 
 ******
 \newpage
-## Train/Test Split and K-Fold Cross Validation
+## Train/Test Split 
 ```{r}
 #Train/test split
 set.seed(1)
@@ -523,7 +523,15 @@ roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
 
 #Train model
 set.seed(1)
-system.time(NB_model <- naiveBayes(as.factor(any_complication) ~ ., data = train))
+# system.time(NB_model <-  train(
+#   any_complication ~.,
+#   train,
+#   method = 'naive_bayes',
+#   )
+# )
+
+library(naivebayes)
+system.time(NB_model <- naive_bayes(any_complication ~., data = train))
 
 #Predict results using test dataset
 preds <- predict(NB_model, test)
@@ -545,13 +553,16 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 #Random Forest
 
 #Train model
-library(randomForest)
+library(ranger)
 set.seed(1)
-system.time(RF_model <- randomForest(any_complication ~., data = train, proximity = TRUE,
-                                     ntree = 500, na.action = na.exclude))
+
+system.time(RF_model <- ranger(
+    formula         = any_complication ~ ., 
+    data            = train
+  ))
 
 #Predict results using test dataset
-preds <- predict(RF_model, test)
+preds <- predict(RF_model, test)$predictions
 
 #Confusion matrix and statistics
 caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
@@ -573,13 +584,14 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 #Neural Network
 
 #Train model
-library(nnet)
 set.seed(1)
-system.time(NN_model <- nnet::nnet(any_complication ~ ., data = train, size = 1))
+# system.time(NN_model <- train(any_complication~., data=train, method='nnet', trace=F))
 
+system.time(NN_model <- nnet::nnet(any_complication~., data=train, size = 1))
+            
 #Predict results using test dataset
 result <- predict(NN_model, newdata = test)
-preds <- ifelse(result > 0.5, 1,0 )
+preds <- ifelse(result > 0.5, 1, 0)
 
 #Confusion matrix and statistics
 confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
@@ -605,14 +617,14 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 set.seed(1)
 
 #Train model
-system.time(full_LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train_smote, na.action = na.omit))
-summary(full_LR_model)
+system.time(full_LR_model_smote <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train_smote, na.action = na.omit))
+summary(full_LR_model_smote)
 
 #https://www.datacamp.com/community/tutorials/logistic-regression-R
 #https://towardsdatascience.com/machine-learning-with-r-logistic-regression-152ec20351db
 
 #Predict results using test dataset
-result <- predict(full_LR_model, newdata = test, type = 'response')
+result <- predict(full_LR_model_smote, newdata = test, type = 'response')
 
 preds <- ifelse(result > 0.5, 1,0 )
 
@@ -642,10 +654,10 @@ roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
 
 #Train model
 set.seed(1)
-system.time(NB_model <- naiveBayes(as.factor(any_complication) ~ ., data = train_smote))
+system.time(NB_model_smote <- naive_bayes(any_complication ~., data = train_smote))
 
 #Predict results using test dataset
-preds <- predict(NB_model, test)
+preds <- predict(NB_model_smote, test)
 
 #Confusion matrix and statistics
 caret::confusionMatrix(preds, factor(test$any_complication), mode = "everything", positive = "1")
@@ -664,13 +676,14 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 #Random Forest
 
 #Train model
-library(randomForest)
 set.seed(1)
-system.time(RF_model <- randomForest(any_complication ~., data = train_smote, proximity = TRUE,
-                                     ntree = 500, na.action = na.exclude))
+system.time(RF_model_smote <- ranger(
+    formula         = any_complication ~ ., 
+    data            = train_smote
+  ))
 
 #Predict results using test dataset
-preds <- predict(RF_model, test)
+preds <- predict(RF_model_smote, test)$predictions
 
 #Confusion matrix and statistics
 caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
@@ -692,13 +705,13 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 #Neural Network
 
 #Train model
-library(nnet)
 set.seed(1)
-system.time(NN_model <- nnet::nnet(any_complication ~ ., data = train_smote, size = 1))
-
+system.time(NN_model_smote <- nnet::nnet(any_complication~., data=train_smote, size = 1))
+            
 #Predict results using test dataset
-result <- predict(NN_model, newdata = test)
-preds <- ifelse(result > 0.5, 1,0 )
+result <- predict(NN_model_smote, newdata = test)
+preds <- ifelse(result > 0.5, 1, 0)
+
 
 #Confusion matrix and statistics
 confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
@@ -724,14 +737,14 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 set.seed(1)
 
 #Train model
-system.time(full_LR_model_smote <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train_smote, na.action = na.omit))
+system.time(full_LR_model <- glm(any_complication ~.,family = binomial(link = 'logit'), data = train, na.action = na.omit))
 
 #Reference
 # https://datascienceplus.com/perform-logistic-regression-in-r/#:~:text=Logistic%20regression%20is%20a%20method,general%2C%20can%20assume%20different%
 
 #Perform Stepwise Logistic Regression
 library(MASS)
-system.time(step_LR_model <- full_LR_model_smote %>% stepAIC(trace = FALSE))
+system.time(step_LR_model <- full_LR_model %>% stepAIC(direction = 'both', trace = FALSE))
 summary(step_LR_model)
 
 #Reference
@@ -766,10 +779,61 @@ roc <- roc(response = test$any_complication, predictor = preds, smoothed = TRUE,
 
 ```{r}
 #Naive Bayes
-
-#Train model
 set.seed(1)
-system.time(NB_model_tuned <- naiveBayes(as.factor(any_complication) ~ ., data = train_smote, laplace = 1))
+
+#Define F1 score function
+f1 <- function(data, lev = NULL, model = NULL) {
+        f1_val <- MLmetrics::F1_Score(y_pred = data$pred,
+                                      y_true = data$obs,
+                                      positive = lev[1])
+        c(F1 = f1_val)
+}
+
+# https://stackoverflow.com/questions/47820750/training-model-in-caret-using-f1-metric
+
+train_control <- trainControl(method = "cv",
+                          number = 10,
+                          # repeats = 3,
+                          # classProbs = TRUE,
+                          #sampling = "smote",
+                          summaryFunction = f1,
+                          search = "grid")
+
+# set up tuning grid
+search_grid <- expand.grid(
+    usekernel = c(FALSE, TRUE),
+  laplace = 0:5,
+  adjust = seq(0, 5, by = 1)
+)
+
+# train_control <- trainControl(
+#   method = "cv",
+#   number = 10
+#   # repeats = 3,
+#   # search = 'random'
+#   )
+
+# train model
+system.time(NB_model_tuned <- train(
+  any_complication ~.,
+  train,
+  method = "naive_bayes",
+  trControl = train_control,
+  # tuneLength = 10,
+  metric = "F1",
+  tuneGrid = search_grid,
+  )
+)
+
+# # top 5 models
+# NB_model_tuned$results %>% 
+#   top_n(5, wt = Accuracy) %>%
+#   arrange(desc(Accuracy))
+
+# https://uc-r.github.io/naive_bayes#caret
+
+system.time(NB_model_tuned <- naive_bayes(any_complication ~., data = train, laplace = 0, 
+                                          usekernel = TRUE, adjust = 1))
 
 #Predict results using test dataset
 preds <- predict(NB_model_tuned, test)
@@ -790,20 +854,57 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 
 ```{r}
 #Random Forest
+library(ranger)
 
-#Hypertuning - find best mtry value
 set.seed(1)
 
-bestmtry <- tuneRF(train_smote[,1:18], train_smote[, 19], stepFactor = 1.5, improve = 1e-5, ntreeTry = 500)
-#According to the tuning, mtry = 3 has the lowest error rate
-#https://rpubs.com/phamdinhkhanh/389752
+hyper_grid <- expand.grid(
+  mtry       = seq(2,6, by = 2),
+  node_size  = seq(2, 6, by = 2),
+  sampe_size = c(.55, .80),
+  trees = c(500, 1000),
+  F1   = 0
+)
 
-system.time(RF_model_tuned <- randomForest(any_complication ~., data = train_smote, proximity = TRUE, 
-                                           mtry = 3, ntree = 500, na.action = na.exclude))
+for(i in 1:nrow(hyper_grid)) {
+  
+  # train model
+  model <- ranger(
+    formula         = any_complication ~ ., 
+    data            = train, 
+    num.trees       = hyper_grid$trees[i],
+    mtry            = hyper_grid$mtry[i],
+    min.node.size   = hyper_grid$node_size[i],
+    sample.fraction = hyper_grid$sampe_size[i],
+    seed            = 123
+  )
+  
+  # add F1 to grid
+  preds <- predict(model, test)$predictions
+  
+  hyper_grid$F1[i] <- MLmetrics::F1_Score(preds,test$any_complication, positive = 1)
+}
+
+hyper_grid %>% 
+  dplyr::arrange(desc(F1)) %>%
+  head(10)
+
+# https://uc-r.github.io/random_forests#tune
+
+system.time(RF_model_tuned <- ranger(
+    formula         = any_complication ~ ., 
+    data            = train, 
+    num.trees       = 500,
+    mtry            = 2,
+    min.node.size   = 2,
+    sample.fraction = 0.55,
+    seed            = 123
+  ))
+
 
 #Predict results using test dataset
-preds <- predict(RF_model_tuned, test)
-
+preds <- predict(RF_model_tuned, test)$predictions
+ 
 #Confusion matrix and statistics
 caret::confusionMatrix(factor(preds), factor(test$any_complication), mode = "everything", positive = "1")
 
@@ -826,23 +927,40 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
 #Neural Network
 
 #Train model
-library(neuralnet)
 set.seed(1)
-system.time(bestparam <- train(any_complication~., data=train_smote, method='nnet', trace=F,
-                   tuneGrid=expand.grid(.size=c(1,2,3,4), .decay=c(0.001,0.01,0.1))))
+
+train_control <- trainControl(method = "cv",
+                          number = 10,
+                          # repeats = 3,
+                          # classProbs = TRUE,
+                          #sampling = "smote",
+                          summaryFunction = f1,
+                          search = "grid")
+
+
+bestparam <- train(any_complication~., data=train, method='nnet', trace=F, 
+                   trControl = train_control,tuneGrid=expand.grid(.size=c(1,2,3,4),                                   .decay=c(0.7,0.8,0.9, 1)), metric = "F1")
+
+# train_control <- trainControl(method = "repeatedcv",
+#                            number = 10,
+#                            repeats = 3,
+#                            # classProbs = TRUE,
+#                            # summaryFunction = twoClassSummary,
+#                            search = "random")
+# 
+# bestparam <- train(any_complication~., data=train, method='nnet', trace=F,
+#                    trControl = train_control, tuneLength = 40, metric = "F1")
 
 bestparam
 
 # https://www.mydatahack.com/predict-internet-popularity-by-optimising-neural-networks-with-r/
+# https://stackoverflow.com/questions/42417948/how-to-use-size-and-decay-in-nnet
 
-# system.time(NN_model_tuned <- nnet::nnet(any_complication ~ ., data = train_smote, size = 4, decay = 0.1))
-
+system.time(NN_model_tuned <- nnet::nnet(any_complication~., data=train, size = 1, decay = 0.8))
+            
 #Predict results using test dataset
-result <- predict(bestparam, test, type = 'raw')
-preds <- ifelse(result > 0.5, 1,0 )
-
-# presult <- predict(NN_model_tuned, test)
-# preds <- ifelse(result > 0.5, 1,0 )
+result <- predict(NN_model_tuned, newdata = test)
+preds <- ifelse(result > 0.5, 1, 0)
 
 #Confusion matrix and statistics
 confusionMatrix(data = factor(preds), reference = factor(test$any_complication), mode = "everything", positive = "1")
@@ -854,7 +972,6 @@ roc <- roc(response = test$any_complication, predictor = as.numeric(preds), smoo
             # arguments for plot
             plot=TRUE, auc.polygon=TRUE, max.auc.polygon=TRUE, grid=TRUE,
             print.auc=TRUE, show.thres=TRUE)
-
 
 ```
 
